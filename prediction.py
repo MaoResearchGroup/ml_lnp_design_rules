@@ -99,8 +99,8 @@ def generate_iv_validation_list(predictions, helper_lipid_names, cell_type, name
     high_bar = 0.7
     low_bar = 0.15
   else:
-    high_bar = 0.7
-    low_bar = 0.3
+    high_bar = 0.66
+    low_bar = 0.33
   
 
   high_pred_formulations = predictions.loc[predictions['Scaled_Predicted_Values'] >= high_bar]
@@ -170,8 +170,8 @@ def main():
 
   ################ Retreive/Store Data ##############################################
   datafile_path = "Raw_Data/7_Master_Formulas.csv"
-  model_path = 'Trained_Models/230204_Models/'
-  save_path = "Predictions/230204_predictions/"
+  model_path = 'Trained_Models/Final_Models/'
+  save_path = "Predictions/Final_Models/"
   ################ INPUT PARAMETERS ############################################
 
   wt_percent = False
@@ -190,7 +190,7 @@ def main():
 
 ##################### Run Predictions ###############################
   #Training Data
-  cell_type = 'HEK293'
+  cell_type = 'HepG2'
   model_list = ['RF', 'XGB', 'LGBM']
   df = init_data(datafile_path, cell_type)
   training_data = df.loc[:,df.columns.isin(['Formula label', 'Helper_lipid'] + input_param_names + ['RLU_'+ cell_type])]

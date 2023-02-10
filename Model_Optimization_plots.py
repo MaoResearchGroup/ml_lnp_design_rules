@@ -25,19 +25,7 @@ def extraction_all(name, cell, model_path):
     
     return dataframe_all
 
-
-
-
-
-
-def main():
-    ################ Retreive/Store Data ##############################################
-    datafile_path = "Raw_Data/7_Master_Formulas.csv"
-    model_path = 'Trained_Models/230204_Models/'
-    save_path = "Figures/Model_Selection/"
-    ################ INPUT PARAMETERS ############################################
-    cell_type_names = ['HEK293','HepG2', 'N2a', 'ARPE19', 'B16', 'PC3']
-
+def plot_AE_Box(cell_type_names, model_path, save_path):
     for cell in cell_type_names:
         #Extract data for all models
         ALL_MLR = extraction_all('MLR', cell, model_path)
@@ -149,7 +137,31 @@ def main():
 
         plt.savefig(save_path + f"{cell} Model Selection Boxplot.png", dpi=600, format = 'png', transparent=True, bbox_inches='tight')
 
-        #plt.show()`
+        #plt.show()
+
+def main():
+    ################ Retreive/Store Data ##############################################
+    datafile_path = "Raw_Data/7_Master_Formulas.csv"
+    model_path = 'Trained_Models/Final_Models/'
+    save_path = "Figures/Model_Selection/"
+    ################ INPUT PARAMETERS ############################################
+    cell_type_names = ['HEK293','HepG2', 'N2a', 'ARPE19', 'B16', 'PC3']
+    plot_AE_Box(cell_type_names, model_path, save_path)
+
+    # #plot best models hold-out prediction vs experimental
+    # fig, axs = plt.subplots(1, len(model_list), sharex=True, sharey=True, figsize=(10,4))
+    # for ax_ind, ax in enumerate(axs):
+    #     print(ax_ind)
+    #     predicted_values = prediction_list[ax_ind]
+    #     ax.scatter(predicted_values, experimental)
+    #     ax.set_title(f'{model_list[ax_ind]}')
+    #     if ax_ind == 0:
+    #         ax.set_ylabel('Experimental_RLU')
+    #     elif ax_ind == 2:
+    #         ax.set_xlabel('Predicted_RLU')
+
+    #     ax.legend(frameon=False, handlelength=0)
+    # plt.savefig(plot_save_path + f'Validation.png', bbox_inches = 'tight')
 
 if __name__ == "__main__":
     main()

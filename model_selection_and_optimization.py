@@ -91,18 +91,18 @@ def main():
   ################ INPUT PARAMETERS ############################################
   #file_path = "/content/drive/MyDrive/4_Master_Formulas_1080_lipidparam_csv.csv" #Ataes
   data_file_path = 'Raw_Data/7_Master_Formulas.csv' #leo
-  save_path = "Trained_Models/230204_Models/" # Add any descriptors such as date ran....
+  save_path = "Trained_Models/Final_Models_wt/" # Add any descriptors such as date ran....
 
 
-  wt_percent = False
+  wt_percent = True
   if wt_percent == True:
     formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
   else:
     formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
                         'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio']
   helper_lipid_names = ['18PG', 'DOPE','DOTAP','DSPC', '14PA', 'DDAB']
-  cell_type_names = ['HEK293','HepG2', 'N2a', 'ARPE19', 'B16', 'PC3']
-  #cell_type_names = ['HEK293']
+  cell_type_names = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
+
   
   lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA',
                        'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']

@@ -50,9 +50,9 @@ def extract_training_data(data_path, cell_type_list, input_param_names):
 def main():
 
   ################ Retreive Data ##############################################
-  model_folder = "Trained_Models/230204_Models/" #Leo
+  model_folder = "Trained_Models/Final_Models/" #Leo
   datafile_path = 'Raw_Data/7_Master_Formulas.csv' 
-  plot_save_path = "Figures/SHAP/"
+  plot_save_path = "Figures/SHAP/Final_Models_wt/"
   ################ INPUT PARAMETERS ############################################
 
   wt_percent = False
@@ -73,7 +73,7 @@ def main():
   #Training Data
   cell_type = ['HEK293', 'HepG2', 'N2a', 'ARPE19', 'B16', 'PC3']
   #cell_type = ['HEK293', 'HepG2', 'N2a']
-  model_list = ['XGB']
+  model_list = ['LGBM', 'RF']
   #model_list = ['RF', 'MLR', 'lasso', 'PLS', 'SVR', 'kNN', 'LGBM', 'XGB', 'DT']
   
   train_data_list = extract_training_data(datafile_path, cell_type, input_param_names)
@@ -87,19 +87,14 @@ def main():
       model_path = model_folder + f'{model_name}/{c}/{model_name}_{c}_Trained.pkl'
       with open(model_path, 'rb') as file: # import trained model
         trained_model = pickle.load(file)
-      explainer = shap.Explainer(trained_model.predict, train_data_list[cell_type.index(c)]) #for RF, XGB, LGBM
+      if model_name == 'XGB':
+        explainer = shap.Explainer(trained_model.predict, train_data_list[cell_type.index(c)]) #for RF, XGB, LGBM
+      else:
+        explainer = shap.Explainer(trained_model, train_data_list[cell_type.index(c)]) #for RF, XGB, LGBM
       shap_values = explainer(train_data_list[cell_type.index(c)])
       shap_values_list.append(shap_values)
-    with open(f"SHAP_Values/{model_name}_SHAP_value_list.pkl",  'wb') as file:
+    with open(f"SHAP_Values/Final_Models/{model_name}_SHAP_value_list.pkl",  'wb') as file:
       pickle.dump(shap_values_list, file)
 
 if __name__ == "__main__":
     main()
-
-'''
-Implement Gridsearch for hyperparameter tuning; this could be improved by focusing on a single hyperparameter and demonstrating the impact on accuracy based on chnaging this
-'''
-
-'''
-See if areas of high transfection efficiency can be identified based on the attributes; another way of phrasing this problem can be of one based on unsupervised clustering; can try Bayesian optimization as well
-'''

@@ -26,12 +26,12 @@ def extract_training_data(data_path, cell_type_list, input_param_names):
 def main():
 
   ################ Retreive Data ##############################################
-  model_folder = "Trained_Models/230204_Models/" #Leo
+  model_folder = "Trained_Models/Final_Models_wt/" #Leo
   datafile_path = 'Raw_Data/7_Master_Formulas.csv' 
-  plot_save_path = "Figures/SHAP/"
+  plot_save_path = "Figures/SHAP/wt_percent/"
   ################ INPUT PARAMETERS ############################################
 
-  wt_percent = False
+  wt_percent = True
   if wt_percent == True:
     formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
   else:
@@ -49,42 +49,42 @@ def main():
   #Training Data
   cell_type = ['HEK293', 'HepG2', 'N2a', 'ARPE19', 'B16', 'PC3']
   #cell_type = ['HEK293', 'HepG2', 'N2a']
-  model_list = ['RF']
+  model_list = ['RF', 'LGBM']
   #model_list = ['RF', 'MLR', 'lasso', 'PLS', 'SVR', 'kNN', 'LGBM', 'XGB', 'DT']
   #Extracting SHAP Values
   for model_name in model_list:
-    with open(f"SHAP_Values/{model_name}_SHAP_value_list.pkl", "rb") as file:   # Unpickling
+    with open(f"SHAP_Values/Final_Models_wt/{model_name}_SHAP_value_list.pkl", "rb") as file:   # Unpickling
       shap_values_list = pickle.load(file)
     
     
-    #Plotting
+    # #Plot Beeswarm
     fig = plt.figure()               
     col2num = {col: i for i, col in enumerate(input_param_names)}
     feature_order = list(map(col2num.get, input_param_names))
     #print(feature_order)
     
     #Plots
-    ax1 = fig.add_subplot(231)
+    ax1 = fig.add_subplot(321)
     shap.plots.beeswarm(shap_values_list[0], max_display=12,show=False, color_bar=False, order=feature_order)
     ax1.set_title(cell_type[0])
     
-    ax2 = fig.add_subplot(232)
+    ax2 = fig.add_subplot(322)
     shap.plots.beeswarm(shap_values_list[1], max_display=12,show=False, color_bar=False, order=feature_order)
     ax2.set_title(cell_type[1])
 
-    ax3 = fig.add_subplot(233)
+    ax3 = fig.add_subplot(323)
     shap.plots.beeswarm(shap_values_list[2], max_display=12,show=False, color_bar=False, order=feature_order)
     ax3.set_title(cell_type[2])
 
-    ax4 =fig.add_subplot(234)
+    ax4 =fig.add_subplot(324)
     shap.plots.beeswarm(shap_values_list[3], max_display=12,show=False, color_bar=False, order=feature_order)
     ax4.set_title(cell_type[3])
 
-    ax5 =fig.add_subplot(235)
+    ax5 =fig.add_subplot(325)
     shap.plots.beeswarm(shap_values_list[4], max_display=12,show=False, color_bar=False, order=feature_order)
     ax5.set_title(cell_type[4])
 
-    ax6 =fig.add_subplot(236)
+    ax6 =fig.add_subplot(326)
     shap.plots.beeswarm(shap_values_list[5], max_display=12,show=False, color_bar=False, order=feature_order)
     ax6.set_title(cell_type[5])
 
@@ -93,7 +93,6 @@ def main():
     ax2.set(xlabel=None)
     ax3.set(xlabel=None)
     ax4.set(xlabel=None)
-    ax6.set(xlabel=None)
 
     #Set X axis limis
     ax1.set_xlim( xmin = -0.2, xmax = 0.2)
@@ -104,13 +103,13 @@ def main():
     ax6.set_xlim( xmin = -0.2, xmax = 0.2)
     #Remove duplicate y axis labels
     ax2.get_yaxis().set_visible(False)
-    ax3.get_yaxis().set_visible(False)
-    ax5.get_yaxis().set_visible(False)
+    ax4.get_yaxis().set_visible(False)
     ax6.get_yaxis().set_visible(False)
 
     #Format Y axis
     ax1.tick_params(axis='y', labelsize=10)
-    ax4.tick_params(axis='y', labelsize=10)
+    ax3.tick_params(axis='y', labelsize=10)
+    ax5.tick_params(axis='y', labelsize=10)
 
 
     #Colorbar
@@ -125,19 +124,72 @@ def main():
 
     #Overall Plot Formats
     fig.suptitle(f'{model_name} SHAP Summary Plots' , horizontalalignment='right', verticalalignment='top', fontsize = 20)
-    plt.gcf().set_size_inches(15,8)
+    plt.gcf().set_size_inches(12, 15)
 
     #Save plot
     plt.savefig(plot_save_path + f'{model_name}_Summary.png', bbox_inches = 'tight')
 
 
+    #Feature importance Bar plot
+    fig2 = plt.figure() 
+    ax1 = fig2.add_subplot(321)
+    shap.plots.bar(shap_values_list[0], max_display=12,show=False, order=feature_order)
+    ax1.set_title(cell_type[0])
+    
+    ax2 = fig2.add_subplot(322)
+    shap.plots.bar(shap_values_list[1], max_display=12,show=False, order=feature_order)
+    ax2.set_title(cell_type[1])
+
+    ax3 = fig2.add_subplot(323)
+    shap.plots.bar(shap_values_list[2], max_display=12,show=False, order=feature_order)
+    ax3.set_title(cell_type[2])
+
+    ax4 =fig2.add_subplot(324)
+    shap.plots.bar(shap_values_list[3], max_display=12,show=False,order=feature_order)
+    ax4.set_title(cell_type[3])
+
+    ax5 =fig2.add_subplot(325)
+    shap.plots.bar(shap_values_list[4], max_display=12,show=False,  order=feature_order)
+    ax5.set_title(cell_type[4])
+
+    ax6 =fig2.add_subplot(326)
+    shap.plots.bar(shap_values_list[5], max_display=12,show=False, order=feature_order)
+    ax6.set_title(cell_type[5])
+
+    #Remove duplicate X axis labels
+    ax1.set(xlabel=None)  
+    ax2.set(xlabel=None)
+    ax3.set(xlabel=None)
+    ax4.set(xlabel=None)
+
+    #Set X axis limis
+    fig2_x_min = 0
+    fig2_x_max = .12
+    ax1.set_xlim( xmin = fig2_x_min , xmax = fig2_x_max)
+    ax2.set_xlim( xmin = fig2_x_min , xmax = fig2_x_max)
+    ax3.set_xlim( xmin = fig2_x_min , xmax = fig2_x_max)
+    ax4.set_xlim( xmin = fig2_x_min , xmax = fig2_x_max)
+    ax5.set_xlim( xmin = fig2_x_min , xmax = fig2_x_max)
+    ax6.set_xlim( xmin = fig2_x_min , xmax = fig2_x_max)
+    #Remove duplicate y axis labels
+    ax2.get_yaxis().set_visible(False)
+    ax4.get_yaxis().set_visible(False)
+    ax6.get_yaxis().set_visible(False)
+
+    #Format Y axis
+    ax1.tick_params(axis='y', labelsize=10)
+    ax3.tick_params(axis='y', labelsize=10)
+    ax5.tick_params(axis='y', labelsize=10)
+ 
+
+    #Overall Plot Formats
+    fig2.suptitle(f'{model_name} SHAP Feature Importance Plots' , horizontalalignment='right', verticalalignment='top', fontsize = 20)
+    plt.gcf().set_size_inches(12, 15)
+
+    #Save plot
+    plt.savefig(plot_save_path + f'{model_name}_Bar.png', bbox_inches = 'tight')
+
+    # plt.tight_layout()
+    # plt.show()
 if __name__ == "__main__":
     main()
-
-'''
-Implement Gridsearch for hyperparameter tuning; this could be improved by focusing on a single hyperparameter and demonstrating the impact on accuracy based on chnaging this
-'''
-
-'''
-See if areas of high transfection efficiency can be identified based on the attributes; another way of phrasing this problem can be of one based on unsupervised clustering; can try Bayesian optimization as well
-'''

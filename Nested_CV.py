@@ -87,7 +87,7 @@ class NESTED_CV:
                         'max_depth':[None],
                         'min_samples_split':[2,4,6],
                         'min_samples_leaf':[1,2,4],
-                        'max_features': [None, 'auto', 'sqrt','log2'],
+                        'max_features': [None, 1.0, 'sqrt','log2'],
                         'ccp_alpha': [0, 0.05, 0.1, 0.15]}  
         
         elif model_type == 'RF':
