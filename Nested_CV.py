@@ -246,7 +246,7 @@ class NESTED_CV:
           #### evaluate model on the hold out dataset
           yhat = best_model.predict(X_test)
 
-          # store drug release predictions #Cell-type transfection predictions
+          #Cell-type transfection predictions
           self.pred_list.append(yhat)
 
           # evaluate the model accuracy using the hold out dataset Mean Absolute Error
