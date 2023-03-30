@@ -7,7 +7,7 @@ import pickle
 def main():
 
     ################ Retreive Data ##############################################
-    result_folder = "Trained_Models/Final_Models/" 
+    result_folder = "Trained_Models/Models_Size_Zeta_comp/" 
     cell_type = ['HEK293', 'HepG2', 'N2a', 'ARPE19', 'B16', 'PC3']
     model_list = ['RF', 'MLR', 'lasso', 'PLS', 'kNN', 'LGBM', 'XGB', 'DT']
     
@@ -16,7 +16,7 @@ def main():
 
     for model in model_list:
         for cell in cell_type:
-            result_file_path = result_folder + f'{model}/{cell}/{model}_HP_Tuning_Results.pkl'
+            result_file_path = result_folder + f'{model}/{cell}/{model}_{cell}_HP_Tuning_Results.pkl'
             with open(result_file_path, 'rb') as file:
                 results = pickle.load(file)
                 results.drop(columns = ['Iter','Formulation_Index'], inplace = True)

@@ -26,34 +26,36 @@ def extract_training_data(data_path, cell_type_list, input_param_names):
 def main():
 
   ################ Retreive Data ##############################################
-  model_folder = "Trained_Models/Final_Models_wt/" #Leo
-  datafile_path = 'Raw_Data/7_Master_Formulas.csv' 
-  plot_save_path = "Figures/SHAP/wt_percent/"
+  plot_save_path = "Figures/SHAP/Models_Size_Zeta/"
+  shap_value_path = 'SHAP_Values/Models_Size_Zeta/'
   ################ INPUT PARAMETERS ############################################
 
-  wt_percent = True
+  wt_percent = False
+  size_zeta = True
   if wt_percent == True:
     formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
   else:
     formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
                         'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio']
-  helper_lipid_names = ['18PG', 'DOPE','DOTAP','DSPC', '14PA', 'DDAB']
-
   
   lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA',
                        'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
-  input_param_names =  lipid_param_names + formulation_param_names
+  
+  if size_zeta == True:
+    input_param_names = lipid_param_names +  formulation_param_names + ['Size', 'Zeta']
+  else:
+    input_param_names = lipid_param_names +  formulation_param_names 
 
 
 ##################### Run Predictions ###############################
   #Training Data
   cell_type = ['HEK293', 'HepG2', 'N2a', 'ARPE19', 'B16', 'PC3']
   #cell_type = ['HEK293', 'HepG2', 'N2a']
-  model_list = ['RF', 'LGBM']
+  model_list = ['LGBM', 'XGB', 'RF']
   #model_list = ['RF', 'MLR', 'lasso', 'PLS', 'SVR', 'kNN', 'LGBM', 'XGB', 'DT']
   #Extracting SHAP Values
   for model_name in model_list:
-    with open(f"SHAP_Values/Final_Models_wt/{model_name}_SHAP_value_list.pkl", "rb") as file:   # Unpickling
+    with open(shap_value_path + f"{model_name}_SHAP_value_list.pkl", "rb") as file:   # Unpickling
       shap_values_list = pickle.load(file)
     
     
@@ -65,27 +67,27 @@ def main():
     
     #Plots
     ax1 = fig.add_subplot(321)
-    shap.plots.beeswarm(shap_values_list[0], max_display=12,show=False, color_bar=False, order=feature_order)
+    shap.plots.beeswarm(shap_values_list[0], max_display=15,show=False, color_bar=False, order=feature_order)
     ax1.set_title(cell_type[0])
     
     ax2 = fig.add_subplot(322)
-    shap.plots.beeswarm(shap_values_list[1], max_display=12,show=False, color_bar=False, order=feature_order)
+    shap.plots.beeswarm(shap_values_list[1], max_display=15,show=False, color_bar=False, order=feature_order)
     ax2.set_title(cell_type[1])
 
     ax3 = fig.add_subplot(323)
-    shap.plots.beeswarm(shap_values_list[2], max_display=12,show=False, color_bar=False, order=feature_order)
+    shap.plots.beeswarm(shap_values_list[2], max_display=15,show=False, color_bar=False, order=feature_order)
     ax3.set_title(cell_type[2])
 
     ax4 =fig.add_subplot(324)
-    shap.plots.beeswarm(shap_values_list[3], max_display=12,show=False, color_bar=False, order=feature_order)
+    shap.plots.beeswarm(shap_values_list[3], max_display=15,show=False, color_bar=False, order=feature_order)
     ax4.set_title(cell_type[3])
 
     ax5 =fig.add_subplot(325)
-    shap.plots.beeswarm(shap_values_list[4], max_display=12,show=False, color_bar=False, order=feature_order)
+    shap.plots.beeswarm(shap_values_list[4], max_display=15,show=False, color_bar=False, order=feature_order)
     ax5.set_title(cell_type[4])
 
     ax6 =fig.add_subplot(326)
-    shap.plots.beeswarm(shap_values_list[5], max_display=12,show=False, color_bar=False, order=feature_order)
+    shap.plots.beeswarm(shap_values_list[5], max_display=15,show=False, color_bar=False, order=feature_order)
     ax6.set_title(cell_type[5])
 
     #Remove duplicate X axis labels
@@ -133,27 +135,27 @@ def main():
     #Feature importance Bar plot
     fig2 = plt.figure() 
     ax1 = fig2.add_subplot(321)
-    shap.plots.bar(shap_values_list[0], max_display=12,show=False, order=feature_order)
+    shap.plots.bar(shap_values_list[0], max_display=15,show=False, order=feature_order)
     ax1.set_title(cell_type[0])
     
     ax2 = fig2.add_subplot(322)
-    shap.plots.bar(shap_values_list[1], max_display=12,show=False, order=feature_order)
+    shap.plots.bar(shap_values_list[1], max_display=15,show=False, order=feature_order)
     ax2.set_title(cell_type[1])
 
     ax3 = fig2.add_subplot(323)
-    shap.plots.bar(shap_values_list[2], max_display=12,show=False, order=feature_order)
+    shap.plots.bar(shap_values_list[2], max_display=15,show=False, order=feature_order)
     ax3.set_title(cell_type[2])
 
     ax4 =fig2.add_subplot(324)
-    shap.plots.bar(shap_values_list[3], max_display=12,show=False,order=feature_order)
+    shap.plots.bar(shap_values_list[3], max_display=15,show=False,order=feature_order)
     ax4.set_title(cell_type[3])
 
     ax5 =fig2.add_subplot(325)
-    shap.plots.bar(shap_values_list[4], max_display=12,show=False,  order=feature_order)
+    shap.plots.bar(shap_values_list[4], max_display=15,show=False,  order=feature_order)
     ax5.set_title(cell_type[4])
 
     ax6 =fig2.add_subplot(326)
-    shap.plots.bar(shap_values_list[5], max_display=12,show=False, order=feature_order)
+    shap.plots.bar(shap_values_list[5], max_display=15,show=False, order=feature_order)
     ax6.set_title(cell_type[5])
 
     #Remove duplicate X axis labels

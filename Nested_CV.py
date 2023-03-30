@@ -168,22 +168,43 @@ class NESTED_CV:
         else:
           print("#######################\nSELECTION UNAVAILABLE!\n#######################\n\nPlease chose one of the following options:\n\n 'MLR'for multiple linear regression\n\n 'lasso' for multiple linear regression with east absolute shrinkage and selection operator (lasso)\n\n 'kNN'for k-Nearest Neighbors\n\n 'PLS' for partial least squares\n\n 'SVR' for support vertor regressor\n\n 'DT' for decision tree\n\n 'RF' for random forest\n\n 'LGBM' for LightGBM\n\n 'XGB' for XGBoost\n\n 'NGB' for NGBoost")
 
-    def input_target(self, cell_type, wt_percent):
+    def input_target(self, cell_type, wt_percent, size_zeta):
         if wt_percent == True:
           formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
         else:
           formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
                         'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'] 
+          
         lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
-        input_param_names = lipid_param_names + formulation_param_names
 
-        cell_data = self.df.loc[:,self.df.columns.isin(['Formula label', 'Helper_lipid'] + input_param_names + ['RLU_'+ cell_type])]
-        cell_data.dropna(inplace = True) #Remove any NaN rows
-        cell_data['RLU_'+ cell_type].replace(0, 1, inplace= True) #Replace 0 transfection with 1
+        if size_zeta == True:
+          input_param_names = lipid_param_names +  formulation_param_names + ['Size', 'Zeta']
+        else:
+          input_param_names = lipid_param_names +  formulation_param_names 
+        
+
+        #Formatting Training Data
+        cell_data = self.df[['Formula label', 'Helper_lipid'] + input_param_names + ['RLU_'+ cell_type]]
+        cell_data = cell_data.dropna() #Remove any NaN rows
+        if size_zeta == True:
+          cell_data = cell_data[cell_data.Size != 0] #Remove any rows where size = 0
+          cell_data = cell_data[cell_data.Zeta != 0] #Remove any rows where zeta = 0
+
+        cell_data['RLU_'+ cell_type].replace(0, 1, inplace= True) #Replace 0 transfection with 1... maybe convert this to 0.693
         cell_data.reset_index(drop = True, inplace=True)
 
-        self.X = cell_data.loc[:, cell_data.columns.isin(input_param_names)]                         
-        Y = cell_data['RLU_' + cell_type].to_numpy()
+        self.cell_data = cell_data
+
+        # #Remove the Size and Zeta Columns for comparision
+        # input_param_names = lipid_param_names +  formulation_param_names
+        # self.cell_data = self.cell_data[['Formula label', 'Helper_lipid'] + input_param_names + ['RLU_'+ cell_type]]
+        
+        print("Input Parameters used:", input_param_names)
+        print("Number of Datapoints used:", len(self.cell_data.index))
+
+
+        self.X = self.cell_data[input_param_names]                         
+        Y = self.cell_data['RLU_' + cell_type].to_numpy()
         scaler = MinMaxScaler().fit(Y.reshape(-1,1))
         temp_Y = scaler.transform(Y.reshape(-1,1))
         self.Y = pd.DataFrame(temp_Y, columns = ['RLU_' + cell_type])

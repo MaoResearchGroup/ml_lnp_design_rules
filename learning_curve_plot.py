@@ -169,30 +169,48 @@ def main():
 
     ############## LOAD DATA AND PLOTTING #####################
     NUM_ITER = 10
+    #Initialize Data
+    all_data = pd.DataFrame()
     for model_name in model_list:
         for cell_type in cell_type_list:
-            #Initialize Data
             mean_train_scores = pd.read_csv(save_path + f'{model_name}_{cell_type}_training_results.csv' )
             mean_train_scores.rename(columns={mean_train_scores.columns[0]: "Train_size" }, inplace = True)
-            mean_train_scores["Score_Type"] = "Train_MAE"
+            mean_train_scores["Score_Type"] = "Train"
             mean_train_scores["Mean_MAE"] = mean_train_scores.iloc[:, range(1,NUM_ITER+1)].mean(axis=1)
             mean_train_scores["sd"] = mean_train_scores.iloc[:, range(1,NUM_ITER+1)].std(axis=1)
         
             mean_validation_scores = pd.read_csv(save_path + f'{model_name}_{cell_type}_val_results.csv' )
             mean_validation_scores.rename(columns={mean_validation_scores.columns[0]: "Train_size" }, inplace = True)
-            mean_validation_scores["Score_Type"] = "Validation_MAE"
+            mean_validation_scores["Score_Type"] = "Validation"
             mean_validation_scores["Mean_MAE"] = mean_validation_scores.iloc[:, range(1,NUM_ITER+1)].mean(axis=1)
             mean_validation_scores["sd"] = mean_validation_scores.iloc[:, range(1,NUM_ITER+1)].std(axis=1)
       
             train_valid_scores = pd.concat([mean_validation_scores, mean_train_scores], ignore_index= True)
+            train_valid_scores["Cell_Type"] = cell_type
+            train_valid_scores["Model_Type"] = model_name
+            all_data = pd.concat([all_data, train_valid_scores], ignore_index=True)
 
-            #Plot
-            plt.figure(figsize = (7,7))
-            plt.ylim(0, 0.25)
-            plt.xlim(0, 900)
-            
-            sns.lineplot(data = train_valid_scores, x = "Train_size", y = "Mean_MAE", hue = "Score_Type", errorbar = "sd", markers=True).set(title = f'{model_name}_Training_size')
-            plt.savefig(save_path+ f'{model_name}_{cell_type}_trainsize.png', bbox_inches = 'tight')
+    ###### Plotting
+    for model_name in model_list:
+        fig, axes = plt.subplots(2,3, sharex = True, sharey = True, figsize = (18, 12))
+        plt.ylim(0, 0.25)
+        plt.xlim(0, 900)
+        fig.suptitle(f'{model_name}_Train_size', fontsize = 18) 
+        sns.lineplot(data = all_data.loc[(all_data['Model_Type'] == model_name) & (all_data['Cell_Type'] == 'HEK293')],
+                      x = "Train_size", y = "Mean_MAE", hue = "Score_Type", errorbar = "sd", ax = axes[0,0]).set(title ='HEK293')
+        sns.lineplot(data = all_data.loc[(all_data['Model_Type'] == model_name) & (all_data['Cell_Type'] == 'B16')],
+                      x = "Train_size", y = "Mean_MAE", hue = "Score_Type", errorbar = "sd", ax = axes[0,1]).set(title ='B16')
+        sns.lineplot(data = all_data.loc[(all_data['Model_Type'] == model_name) & (all_data['Cell_Type'] == 'HepG2')],
+                      x = "Train_size", y = "Mean_MAE", hue = "Score_Type", errorbar = "sd", ax = axes[0,2]).set(title ='HepG2')
+        sns.lineplot(data = all_data.loc[(all_data['Model_Type'] == model_name) & (all_data['Cell_Type'] == 'N2a')],
+                      x = "Train_size", y = "Mean_MAE", hue = "Score_Type", errorbar = "sd", ax = axes[1,0]).set(title ='N2a')        
+        sns.lineplot(data = all_data.loc[(all_data['Model_Type'] == model_name) & (all_data['Cell_Type'] == 'PC3')],
+                      x = "Train_size", y = "Mean_MAE", hue = "Score_Type", errorbar = "sd", ax = axes[1,1]).set(title ='PC3') 
+        sns.lineplot(data = all_data.loc[(all_data['Model_Type'] == model_name) & (all_data['Cell_Type'] == 'ARPE19')],
+                      x = "Train_size", y = "Mean_MAE", hue = "Score_Type", errorbar = "sd", ax = axes[1,2]).set(title ='ARPE19')
+        
+        plt.savefig(save_path + f'{model_name}_Train_size.png', bbox_inches = 'tight')
+
 
 if __name__ == "__main__":
     main()
