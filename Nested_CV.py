@@ -168,20 +168,7 @@ class NESTED_CV:
         else:
           print("#######################\nSELECTION UNAVAILABLE!\n#######################\n\nPlease chose one of the following options:\n\n 'MLR'for multiple linear regression\n\n 'lasso' for multiple linear regression with east absolute shrinkage and selection operator (lasso)\n\n 'kNN'for k-Nearest Neighbors\n\n 'PLS' for partial least squares\n\n 'SVR' for support vertor regressor\n\n 'DT' for decision tree\n\n 'RF' for random forest\n\n 'LGBM' for LightGBM\n\n 'XGB' for XGBoost\n\n 'NGB' for NGBoost")
 
-    def input_target(self, cell_type, wt_percent, size_zeta):
-        if wt_percent == True:
-          formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
-        else:
-          formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
-                        'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'] 
-          
-        lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
-
-        if size_zeta == True:
-          input_param_names = lipid_param_names +  formulation_param_names + ['Size', 'Zeta']
-        else:
-          input_param_names = lipid_param_names +  formulation_param_names 
-        
+    def input_target(self, cell_type, size_zeta, input_param_names):     
 
         #Formatting Training Data
         cell_data = self.df[['Formula label', 'Helper_lipid'] + input_param_names + ['RLU_'+ cell_type]]
@@ -200,6 +187,7 @@ class NESTED_CV:
         # self.cell_data = self.cell_data[['Formula label', 'Helper_lipid'] + input_param_names + ['RLU_'+ cell_type]]
         
         print("Input Parameters used:", input_param_names)
+        print("# of Input Parameters used:", len(input_param_names))
         print("Number of Datapoints used:", len(self.cell_data.index))
 
 
@@ -310,6 +298,18 @@ class NESTED_CV:
         print('Cross Validation Results', CV_dataset)
         # save the results as a class object
         self.CV_dataset = CV_dataset
+      
+    def stats(self):
+      average_mae = np.mean(self.outer_MAE)
+      std_mae = np.std(self.outer_MAE)
+      # Extract the first elements from each tuple
+      first_pearsons = [t[0] for t in self.outer_pearson]
+      average_pearson = np.mean(first_pearsons)
+      std_pearson = np.std(first_pearsons)
+      first_spearman = [t[0] for t in self.outer_spearman]
+      average_spearman = np.mean(first_spearman)
+      std_spearman = np.std(first_spearman)
+      return average_mae, std_mae, average_pearson, std_pearson, average_spearman, std_spearman
 
     def best_model(self):
         # assign the best model hyperparameters
