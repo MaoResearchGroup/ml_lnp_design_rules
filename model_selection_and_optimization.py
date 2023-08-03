@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pickle
-from Nested_CV import NESTED_CV
+#from Nested_CV import NESTED_CV
+from Nested_CV_reformat import NESTED_CV_reformat
 
 
 def run_NESTED_CV(model_name, data_file_path, save_path, cell, wt_percent, size_zeta, CV):
@@ -15,7 +16,8 @@ def run_NESTED_CV(model_name, data_file_path, save_path, cell, wt_percent, size_
   - then returns the results dataframe and the saved model
   """
   if __name__ == '__main__':
-    model_instance = NESTED_CV(data_file_path, model_name)
+    #model_instance = NESTED_CV(data_file_path, model_name)
+    model_instance = NESTED_CV_reformat(data_file_path, model_name)
     model_instance.input_target(cell_type = cell, wt_percent = wt_percent, size_zeta = size_zeta)
     model_instance.cross_validation(CV)
     model_instance.results()
@@ -47,16 +49,16 @@ def run_NESTED_CV(model_name, data_file_path, save_path, cell, wt_percent, size_
 def main():
   
   ################ SAVING, LOADING##########################
-  data_file_path = 'Raw_Data/8_Master_Formulas.csv' #Where to extract training data
-  save_path = "Trained_Models/Models_Size_Zeta/" # Where to save model, results, and training data
+  data_file_path = 'Raw_Data/7_Master_Formulas.csv' #Where to extract training data
+  save_path = "Trained_Models/rounded_3/" # Where to save model, results, and training data
 
   ############### CELLS, ALGORITHMS, PARAMETERS ####################################
-  #model_list = ['LGBM', 'XGB','RF', 'MLR', 'lasso', 'PLS', 'kNN', 'DT'] #Did not include SVR
-  model_list = ['RF'] #Did not include SVR
-  #cell_type_names = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
-  cell_type_names = ['HepG2']
+  model_list = ['LGBM', 'XGB','RF', 'MLR', 'lasso', 'PLS', 'kNN', 'DT'] #Did not include SVR
+  #model_list = ['MLR', 'lasso', 'PLS', 'kNN', 'DT']
+  cell_type_names = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
+  #cell_type_names = ['HepG2']
   wt_percent = False
-  size_zeta = True
+  size_zeta = False
   N_CV = 5
 
   ##################### Screen and Optimize Model #####################################

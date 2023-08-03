@@ -10,9 +10,9 @@ import seaborn as sns
 
 
 ################ Global Variables ##############################################
-datafile_path = "Raw_Data/8_Master_Formulas.csv"
+datafile_path = "Raw_Data/10_Master_Formulas.csv"
 wt_percent = False
-size_zeta = False
+size_zeta = True
 if wt_percent == True:
   formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
 else:
@@ -22,9 +22,9 @@ helper_lipid_names = ['18PG', 'DOPE','DOTAP','DSPC', '14PA', 'DDAB']
 
 
 lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA',
-                      'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
+                      'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds', 'Helper_MW']
 if size_zeta == True:
-    input_param_names = lipid_param_names +  formulation_param_names + ['Size', 'Zeta']
+    input_param_names = lipid_param_names +  formulation_param_names + ['Size', 'Zeta', 'PDI']
 else:
     input_param_names = lipid_param_names +  formulation_param_names 
 
@@ -34,17 +34,22 @@ def main():
     df = pd.read_csv(datafile_path)
           
     #Formatting Training Data
+    print(input_param_names)
     X = df[input_param_names]
     X = X.dropna() #Remove any NaN rows
     if size_zeta == True:
         X = X[X.Size != 0] #Remove any rows where size = 0
-        X  = X[X.Zeta != 0] #Remove any rows where zeta = 0
+        X = X[X.Zeta != 0] #Remove any rows where zeta = 0
+        X = X[X.PDI != 0] #Remove any rows where PDI = 0
 
     X.reset_index(drop = True, inplace=True)
+    print(X)
+    X.drop(['Size', 'Zeta', 'PDI'], axis= 1, inplace=True)
     print(X)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
 
     corr = spearmanr(X).correlation # generate a correlation matrix is symmetric
+    print(corr)
     corr = (corr + corr.T) / 2 # ensure the correlation matrix is symmetric
     np.fill_diagonal(corr, 1)
     distance_matrix = 1 - np.abs(corr) # convert the correlation matrix to a distance matrix 
@@ -180,7 +185,7 @@ def main():
     plt.tick_params(axis='x', which='both', labelsize=12)
 
     plt.tight_layout()
-    plt.savefig('Figures/Clustering/Hierarchical/FN_Cluster.png', dpi=600, format = 'png', transparent=True, bbox_inches='tight')
+    plt.savefig('Figures/Feature_Clustering/Hierarchical/FN_Cluster_Size_Zeta_PDI.png', dpi=600, format = 'png', transparent=True, bbox_inches='tight')
 
     plt.show()
 if __name__ == "__main__":

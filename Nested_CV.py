@@ -175,8 +175,8 @@ class NESTED_CV:
           formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
                         'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'] 
           
-        lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
-
+        #lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
+        lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP','Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds', 'Helper_MW']
         if size_zeta == True:
           input_param_names = lipid_param_names +  formulation_param_names + ['Size', 'Zeta']
         else:
@@ -285,7 +285,7 @@ class NESTED_CV:
           self.model_params.append(result.best_params_)
 
           # report progress at end of each inner loop
-          #Note: Test score = outerloop - hold out - dataset score
+          # Note: Test score = outerloop - hold out - dataset score
           # Best_Valid_Score = innerloop iteration score
           print('\n################################################################\n\nSTATUS REPORT:') 
           print('Iteration '+str(i+1)+' of '+str(NUM_TRIALS)+' runs completed') 

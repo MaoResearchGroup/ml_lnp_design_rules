@@ -3,15 +3,19 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+import seaborn as sns
 
 def main():
 
     ################ Retreive Data ##############################################
-    result_folder = "Trained_Models/Models_Size_Zeta_comp/" 
-    cell_type = ['HEK293', 'HepG2', 'N2a', 'ARPE19', 'B16', 'PC3']
-    model_list = ['RF', 'MLR', 'lasso', 'PLS', 'kNN', 'LGBM', 'XGB', 'DT']
+    result_folder = "Trained_Models/Final_Models/"
+    save_folder = "BMES_Abstract" 
+    #cell_type = ['HEK293', 'HepG2', 'N2a', 'ARPE19', 'B16', 'PC3']
+    cell_type = ['B16']
+    #model_list = ['RF', 'MLR', 'lasso', 'PLS', 'kNN', 'LGBM', 'XGB', 'DT']
+    model_list = ['RF','LGBM', 'XGB']
     
-
+    ##########  Collect all Results ###############
     all_results = pd.DataFrame(columns = ['Model', 'Cell_Type', 'Valid Score', 'Test Score','Spearmans Rank','Pearsons Correlation','Model Parms', 'Experimental_Transfection','Predicted_Transfection'])
 
     for model in model_list:
@@ -55,23 +59,35 @@ def main():
         pearson_results.to_csv(f)   
     
 
-    print(pred_transfection)
-
     ######### Hold Out Validation Pred vs Exp. Plots ########
     for model_name in model_list:
-        fig = plt.figure(figsize=(15, 10))
+        fig = plt.figure(figsize=(5, 5))
         for cell in cell_type:
             predicted = pred_transfection.at[model_name, cell]
             experimental = exp_transfection.at[model_name, cell]
-            plt.subplot(2, 3, cell_type.index(cell)+1)
-            plt.scatter(predicted, experimental)
-            plt.title(cell)
-            if (cell_type.index(cell)+1 == 1 or cell_type.index(cell)+1 == 4):
-                plt.ylabel('Predicted_RLU')
-            if cell_type.index(cell)+1 >= 4:
-                plt.xlabel('Experimental_RLU')
+
+            sns.regplot(x = experimental, y = predicted, color = "k")
+            #plt.plot([0, 1], [0, 1], linestyle = 'dotted', color = 'r') #Ideal line
+            plt.annotate('Pearsons r = {:.2f}'.format(pearson_results.at[model, cell]), xy=(0.1, 0.9), xycoords='axes fraction', fontsize=14)
+            plt.annotate('Spearmans r = {:.2f}'.format(spearman_results.at[model, cell]), xy=(0.1, 0.8), xycoords='axes fraction', fontsize=14)
+            plt.ylabel('ML Predicted Normalized RLU', fontsize=12)
+            plt.xlabel('Experimental Normalized RLU', fontsize=12)
+            plt.xlim(-0.05, 1.05)
+            plt.ylim(-0.05, 1.05)
+            plt.title(cell, fontsize=20)
+            plt.tick_params(axis='both', which='major', labelsize=10)
+
+            # plt.subplot(2, 3, cell_type.index(cell)+1)
+            # plt.scatter(predicted, experimental)
+            # plt.title(cell)
+
+
+            # if (cell_type.index(cell)+1 == 1 or cell_type.index(cell)+1 == 4):
+            #     plt.ylabel('Predicted_RLU')
+            # if cell_type.index(cell)+1 >= 4:
+            #     plt.xlabel('Experimental_RLU')
      
-        plt.savefig(result_folder+ f'/{model_name}_predictions.png', bbox_inches = 'tight')
+        plt.savefig(save_folder+ f'/{model_name}_predictions.png', bbox_inches = 'tight')
 
 
 if __name__ == "__main__":

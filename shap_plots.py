@@ -26,12 +26,13 @@ def extract_training_data(data_path, cell_type_list, input_param_names):
 def main():
 
   ################ Retreive Data ##############################################
-  plot_save_path = "Figures/SHAP/Models_Size_Zeta/"
-  shap_value_path = 'SHAP_Values/Models_Size_Zeta/'
+  plot_save_path = "Figures/BMES_Abstract/"
+  shap_value_path = 'SHAP_Values/Final_Models/'
   ################ INPUT PARAMETERS ############################################
 
   wt_percent = False
-  size_zeta = True
+  size_zeta = False
+  
   if wt_percent == True:
     formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
   else:
@@ -42,15 +43,14 @@ def main():
                        'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
   
   if size_zeta == True:
-    input_param_names = lipid_param_names +  formulation_param_names + ['Size', 'Zeta']
+    input_param_names = formulation_param_names+ lipid_param_names + ['Size', 'Zeta']
   else:
-    input_param_names = lipid_param_names +  formulation_param_names 
+    input_param_names = formulation_param_names+ lipid_param_names 
 
-
+  print(input_param_names)
 ##################### Run Predictions ###############################
   #Training Data
-  cell_type = ['HEK293', 'HepG2', 'N2a', 'ARPE19', 'B16', 'PC3']
-  #cell_type = ['HEK293', 'HepG2', 'N2a']
+  cell_type = ['HEK293', 'HepG2', 'B16', 'N2a', 'PC3', 'ARPE19']
   model_list = ['LGBM', 'XGB', 'RF']
   #model_list = ['RF', 'MLR', 'lasso', 'PLS', 'SVR', 'kNN', 'LGBM', 'XGB', 'DT']
   #Extracting SHAP Values
@@ -63,31 +63,30 @@ def main():
     fig = plt.figure()               
     col2num = {col: i for i, col in enumerate(input_param_names)}
     feature_order = list(map(col2num.get, input_param_names))
-    #print(feature_order)
     
     #Plots
     ax1 = fig.add_subplot(321)
-    shap.plots.beeswarm(shap_values_list[0], max_display=15,show=False, color_bar=False, order=feature_order)
+    shap.plots.beeswarm(shap_values_list[0], max_display=15,show=False, color_bar=False, order=feature_order, color=plt.get_cmap('viridis'))
     ax1.set_title(cell_type[0])
     
     ax2 = fig.add_subplot(322)
-    shap.plots.beeswarm(shap_values_list[1], max_display=15,show=False, color_bar=False, order=feature_order)
+    shap.plots.beeswarm(shap_values_list[1], max_display=15,show=False, color_bar=False, order=feature_order, color=plt.get_cmap('viridis'))
     ax2.set_title(cell_type[1])
 
     ax3 = fig.add_subplot(323)
-    shap.plots.beeswarm(shap_values_list[2], max_display=15,show=False, color_bar=False, order=feature_order)
+    shap.plots.beeswarm(shap_values_list[2], max_display=15,show=False, color_bar=False, order=feature_order, color=plt.get_cmap('viridis'))
     ax3.set_title(cell_type[2])
 
     ax4 =fig.add_subplot(324)
-    shap.plots.beeswarm(shap_values_list[3], max_display=15,show=False, color_bar=False, order=feature_order)
+    shap.plots.beeswarm(shap_values_list[3], max_display=15,show=False, color_bar=False, order=feature_order, color=plt.get_cmap('viridis'))
     ax4.set_title(cell_type[3])
 
     ax5 =fig.add_subplot(325)
-    shap.plots.beeswarm(shap_values_list[4], max_display=15,show=False, color_bar=False, order=feature_order)
+    shap.plots.beeswarm(shap_values_list[4], max_display=15,show=False, color_bar=False, order=feature_order, color=plt.get_cmap('viridis'))
     ax5.set_title(cell_type[4])
 
     ax6 =fig.add_subplot(326)
-    shap.plots.beeswarm(shap_values_list[5], max_display=15,show=False, color_bar=False, order=feature_order)
+    shap.plots.beeswarm(shap_values_list[5], max_display=15,show=False, color_bar=False, order=feature_order, color=plt.get_cmap('viridis'))
     ax6.set_title(cell_type[5])
 
     #Remove duplicate X axis labels
@@ -115,7 +114,7 @@ def main():
 
 
     #Colorbar
-    cbar = plt.colorbar(label = "Feature Value", ax = [ax1, ax2, ax3, ax4, ax5, ax6], ticks = [])
+    cbar = plt.colorbar(label = "Feature Value",  ax = [ax1, ax2, ax3, ax4, ax5, ax6], ticks = [], aspect=20)
     cbar.ax.text(0.5, -0.01, 'Low', transform=cbar.ax.transAxes, 
       va='top', ha='center')
     cbar.ax.text(0.5, 1.0, 'High', transform=cbar.ax.transAxes, 
@@ -188,6 +187,7 @@ def main():
     fig2.suptitle(f'{model_name} SHAP Feature Importance Plots' , horizontalalignment='right', verticalalignment='top', fontsize = 20)
     plt.gcf().set_size_inches(12, 15)
 
+    # shap.plots.beeswarm(shap_values_list[0], max_display=15,show=False, color_bar=True, color=plt.get_cmap('viridis'))
     #Save plot
     plt.savefig(plot_save_path + f'{model_name}_Bar.png', bbox_inches = 'tight')
 

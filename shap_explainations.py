@@ -56,9 +56,9 @@ def get_shap(model, X_train, input_param_names, cell_type, model_name, save_path
 
 
 ################ Retreive Data ##############################################
-model_folder = "Trained_Models/Models_Size_Zeta_comp/" 
-shap_save_path = 'SHAP_Values/Models_Size_Zeta_comp/'
-datafile_path = 'Raw_Data/8_Master_Formulas.csv' 
+model_folder = "Trained_Models/Models_MW/" 
+shap_save_path = 'SHAP_Values/Models_MW/'
+datafile_path = 'Raw_Data/9_Master_Formulas.csv' 
 wt_percent = False
 size_zeta = False
 
@@ -69,13 +69,14 @@ else:
   formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
                       'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'] 
 
-lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA',
-                      'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
+# lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA',
+#                       'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
+lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP','Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds', 'Helper_MW']
 
 if size_zeta == True:
-  input_param_names = lipid_param_names +  formulation_param_names + ['Size', 'Zeta']
+  input_param_names = formulation_param_names+ lipid_param_names + ['Size', 'Zeta']
 else:
-  input_param_names = lipid_param_names +  formulation_param_names 
+  input_param_names = formulation_param_names+ lipid_param_names 
 
 
 """**MAIN**"""

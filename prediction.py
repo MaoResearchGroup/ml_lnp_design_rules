@@ -198,9 +198,10 @@ def init_training_data(df, cell):
 
 ################ Global Variables ##############################################
 datafile_path = "Raw_Data/7_Master_Formulas.csv"
-model_path = 'Trained_Models/Final_Models/'
-save_path = "Predictions/230317/"
+model_path = 'Trained_Models/lnc_add10/'
+save_path = "Predictions/230319_retrained/"
 wt_percent = False
+
 if wt_percent == True:
   formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
 else:
@@ -217,24 +218,34 @@ input_param_names = lipid_param_names + formulation_param_names
 def main():
 ##################### Run Predictions ###############################
   #Training Data
-  cell_type_list = ["HepG2"]
-  model_list = ['RF']
-  df = init_data(datafile_path, cell_type_list)
+  cell_type_list = ['HepG2', 'B16', 'PC3']
+  model_list = ['XGB', 'LGBM', 'RF']
+  #df = init_data(datafile_path, cell_type_list)
 
   #Created CSVs with all the prediction data per model/per cell type
-  # for cell_type in cell_type_list:
-  #   training_data, scaler = init_training_data(df, cell_type)
-  #   #Create Prediction Array (Change to extracting from Excel file)
-  #   X_predictions, helper_lipids = create_X_prediction_array(training_data)
-  #   for model_name in model_list:
-  #     print(f'############ Creating formulations for : {model_name} and {cell_type} ###############')
-  #     #Optimized and Trained ML Model
-  #     with open(model_path +f'{model_name}/{cell_type}/{model_name}_{cell_type}_Trained.pkl', 'rb') as file: # import trained model
-  #       model = pickle.load(file)
-  #     #Prediction Transfection for Formulations in Formulation Array
-  #     predictions = get_predictions(X_predictions, model, scaler, cell_type)
-  #     write_df_to_sheets(predictions, save_path + f"{model_name}_{cell_type}_All_Predictions.csv")
-  #     print(f"saved all {model_name} predictions for {cell_type}")
+  for cell_type in cell_type_list:
+    for model_name in model_list:
+      with open(model_path +f'{model_name}/{cell_type}/{cell_type}_Training_Data.pkl', 'rb') as file: # import trained model
+        df = pickle.load(file)
+      print(df)
+      training_data, scaler = init_training_data(df, cell_type)
+
+
+      #Create Prediction Array (Change to extracting from Excel file)
+      X_predictions, helper_lipids = create_X_prediction_array(training_data)
+
+
+      print(f'############ Creating formulations for : {model_name} and {cell_type} ###############')
+      #Optimized and Trained ML Model
+      with open(model_path +f'{model_name}/{cell_type}/{model_name}_{cell_type}_Trained.pkl', 'rb') as file: # import trained model
+        model = pickle.load(file)
+
+
+      #Prediction Transfection for Formulations in Formulation Array
+      predictions = get_predictions(X_predictions, model, scaler, cell_type)
+      print(predictions)
+      write_df_to_sheets(predictions, save_path + f"{model_name}_{cell_type}_All_Predictions.csv")
+      print(f"saved all {model_name} predictions for {cell_type}")
 
       
   # for cell_type in cell_type_list:
@@ -255,6 +266,8 @@ def main():
   #         prediction_list[f'{add_cell}_Prediction_RLU'] = add_predictions[f'{add_cell}_Prediction_RLU']
   #         print(f"{add_cell} Predictions added to prediction list")
 
+    
+
       
   #     #Saving Formulation Lists
   #     #formulation_list, high_formulations, low_formulations = generate_iv_validation_list(prediction_list, helper_lipids, cell_type, model_name, save_path)
@@ -268,16 +281,19 @@ def main():
   #     # print("saved low predictions")
   #     print("#######################\n")
 
-  for cell_type in cell_type_list:
-    for model_name in model_list:
-      formulation_list = pd.read_csv(save_path + f"{model_name}_{cell_type}_Formulation_List.csv")
-      f, plot = plt.subplots(figsize=(12, 6))
-      sns.scatterplot(formulation_list, x = "Pred_Rank", y =f'{cell_type}_Prediction', hue = "Helper_lipid")
-      plot.invert_xaxis()
-      plt.savefig(save_path + "Pred_Trans_Rank.png", dpi=600, format = 'png', transparent=True, bbox_inches='tight')
+  # for cell_type in cell_type_list:
+  #   for model_name in model_list:
+  #     formulation_list = pd.read_csv(save_path + f"{model_name}_{cell_type}_Formulation_List.csv")
+  #     f, plot = plt.subplots(figsize=(12, 6))
+  #     sns.scatterplot(formulation_list, x = "Pred_Rank", y =f'{cell_type}_Prediction', hue = "Helper_lipid")
+  #     plot.invert_xaxis()
+  #     plt.savefig(save_path + f"{model_name}_Pred_Trans_Rank.png", dpi=600, format = 'png', transparent=True, bbox_inches='tight')
       
-
-
+  #Add predictions for other cell types in formulation list
+  # for cell_type in cell_type_list:
+  #   for model_name in model_list:
+  #     formulation_list = pd.read_csv(save_path + f"{model_name}_{cell_type}_Formulation_List.csv")
+  #     print(formulation_list)
 
 if __name__ == "__main__":
     main()

@@ -42,6 +42,7 @@ def create_X_prediction_array(training):
                             'Dlin-MC3_Helper lipid_ratio' : [1, 5, 10, 30, 50, 75, 100, 125, 150, 175,200],
                             'Dlin-MC3+Helper lipid percentage': [20,30, 40,50, 60, 70, 80], 
                             'Chol_DMG-PEG_ratio': [10, 25, 50, 75, 100, 200, 300, 400, 500]}
+
   
   formulation_param_array = pd.DataFrame([row for row in product(*formulation_params_dic.values())], 
                        columns=formulation_params_dic.keys())
@@ -50,9 +51,9 @@ def create_X_prediction_array(training):
   train_test_array = training[['Helper_lipid', 'NP_ratio', 'Dlin-MC3_Helper lipid_ratio', 'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio']]                   
   print(len(train_test_array))
   
-  formulation_param_array = pd.concat([formulation_param_array, train_test_array], axis = 0, ignore_index= True)
-  print(len(formulation_param_array))
-  write_df_to_sheets(formulation_param_array, save_path + f"test_All_Predictions.csv")
+  # formulation_param_array = pd.concat([formulation_param_array, train_test_array], axis = 0, ignore_index= True)
+  # print(len(formulation_param_array))
+  #write_df_to_sheets(formulation_param_array, save_path + f"test_All_Predictions.csv")
   formulation_param_array.drop_duplicates(subset = ['Helper_lipid', 'NP_ratio', 'Dlin-MC3_Helper lipid_ratio', 'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'], keep=False, inplace = True)
   formulation_param_array.reset_index(drop= True, inplace = True)
 
@@ -149,13 +150,13 @@ def create_train_feature_plot(df, data_save_path, cell_type, saving):
 datafile_path = "Raw_Data/7_Master_Formulas.csv"
 helper_lipid_path = "Raw_Data/Helper_Lipid_Param.csv"
 model_path = 'Trained_Models/Final_Models/'
-save_path = "IP_Predictions/230329/"
+save_path = 'Predictions/'
 wt_percent = False
 if wt_percent == True:
   formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
 else:
-  formulation_param_names = ['Dlin-MC3_Helper lipid_ratio','Chol_DMG-PEG_ratio',
-                      'Dlin-MC3+Helper lipid percentage', 'NP_ratio']
+  formulation_param_names = ['NP_ratio','Dlin-MC3_Helper lipid_ratio',
+                      'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio']
 helper_lipid_names = ['18PG', 'DOPE','DOTAP','DSPC', '14PA', 'DDAB']
 
 
@@ -167,29 +168,33 @@ input_param_names = lipid_param_names + formulation_param_names
 def main():
 ##################### Run Predictions ###############################
   #Training Data
-  cell_type_list = ["HepG2", "PC3", "B16"]
-  model_list = ['RF', "XGB"]
+  cell_type_list = ['HepG2', 'PC3', 'B16']
+  model_list = ['RF', 'XGB', 'LGBM']
   df = init_data(datafile_path, cell_type_list)
 
-  # #Created CSVs with all the prediction data per model/per cell type
-  # for cell_type in cell_type_list:
-  #   training_data, scaler = init_training_data(df, cell_type)
-  #   #Create Prediction Array (Change to extracting from Excel file)
-  #   X_predictions, helper_lipids = create_X_prediction_array(training_data)
-  #   for model_name in model_list:
-  #     print(f'############ Creating formulations for : {model_name} and {cell_type} ###############')
-  #     #Optimized and Trained ML Model
-  #     with open(model_path +f'{model_name}/{cell_type}/{model_name}_{cell_type}_Trained.pkl', 'rb') as file: # import trained model
-  #       model = pickle.load(file)
-  #     #Prediction Transfection for Formulations in Formulation Array
-  #     predictions = get_predictions(X_predictions, model, scaler, cell_type)
-  #     write_df_to_sheets(predictions, save_path + f"{model_name}_{cell_type}_All_Predictions.csv")
-  #     print(f"saved all {model} predictions for {cell_type}")
+  #Created CSVs with all the prediction data per model/per cell type
   for cell_type in cell_type_list:
-    create_train_feature_plot(df, datafile_path, cell_type, save_path +f"{cell_type}_strip_Training_feature.png" ) #Plotting Training Data
-    #for model_name in model_list:  
-      #  create_pred_feature_plot(save_path +  + f"{model_name}_{cell_type}_All_Predictions.csv", cell_type,
-      #                       model_name, save_path + f'{model_name}_{cell_type}_Predictions_Strip.png') #Plotting Prediction Data
+    training_data, scaler = init_training_data(df, cell_type)
+    #Create Prediction Array (Change to extracting from Excel file)
+    #X_predictions, helper_lipids = create_X_prediction_array(training_data)
+    for model_name in model_list:
+      print(f'############ Creating formulations for : {model_name} and {cell_type} ###############')
+      #Optimized and Trained ML Model
+      with open(model_path +f'{model_name}/{cell_type}/{model_name}_{cell_type}_Trained.pkl', 'rb') as file: # import trained model
+        model = pickle.load(file)
+      #Prediction Transfection for Formulations in Formulation Array
+
+      # predictions = get_predictions(X_predictions, model, scaler, cell_type)
+      predictions = get_predictions(training_data, model, scaler, cell_type)
+      
+      #write_df_to_sheets(predictions, save_path + f"{model_name}_{cell_type}_All_Predictions.csv")
+      write_df_to_sheets(predictions, save_path + f"{model_name}_{cell_type}_Training_Data_All_Predictions.csv")
+      print(f"saved all {model} predictions for {cell_type}")
+  # for cell_type in cell_type_list:
+  #   create_train_feature_plot(df, datafile_path, cell_type, save_path +f"{cell_type}_strip_Training_feature.png" ) #Plotting Training Data
+  #   #for model_name in model_list:  
+  #     #  create_pred_feature_plot(save_path +  + f"{model_name}_{cell_type}_All_Predictions.csv", cell_type,
+  #     #                       model_name, save_path + f'{model_name}_{cell_type}_Predictions_Strip.png') #Plotting Prediction Data
        
 
       
