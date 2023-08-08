@@ -169,6 +169,7 @@ class NESTED_CV_reformat:
           print("#######################\nSELECTION UNAVAILABLE!\n#######################\n\nPlease chose one of the following options:\n\n 'MLR'for multiple linear regression\n\n 'lasso' for multiple linear regression with east absolute shrinkage and selection operator (lasso)\n\n 'kNN'for k-Nearest Neighbors\n\n 'PLS' for partial least squares\n\n 'SVR' for support vertor regressor\n\n 'DT' for decision tree\n\n 'RF' for random forest\n\n 'LGBM' for LightGBM\n\n 'XGB' for XGBoost\n\n 'NGB' for NGBoost")
 
     def input_target(self, cell_type, wt_percent, size_zeta):
+        prefix = "RLU_" #WARNING: HARDCODED
         if wt_percent == True:
           formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
         else:
@@ -178,43 +179,35 @@ class NESTED_CV_reformat:
         lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
         #lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP','Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds', 'Helper_MW']
         if size_zeta == True:
-          input_param_names = lipid_param_names +  formulation_param_names + ['Size', 'Zeta']
+          input_param_names = lipid_param_names +  formulation_param_names + ['Size', 'Zeta', 'PDI']
         else:
           input_param_names = lipid_param_names +  formulation_param_names 
         
 
         #Formatting Training Data
-        cell_data = self.df[['Formula label', 'Helper_lipid'] + input_param_names + ['RLU_'+ cell_type]]
+        cell_data = self.df[['Formula label', 'Helper_lipid'] + input_param_names + [prefix + cell_type]]
         cell_data = cell_data.dropna() #Remove any NaN rows
         if size_zeta == True:
           cell_data = cell_data[cell_data.Size != 0] #Remove any rows where size = 0
           cell_data = cell_data[cell_data.Zeta != 0] #Remove any rows where zeta = 0
+          cell_data = cell_data[cell_data.PDI <= 0.45] #Remove any rows where PDI > 0.45
 
-        cell_data.loc[cell_data['RLU_'+ cell_type] < 3, 'RLU_'+ cell_type] = 3 #replace all values below 3 to 3
-        #cell_data['RLU_'+ cell_type].replace(0, 1, inplace= True) #Replace 0 transfection with 1... maybe convert this to 0.693
-        #cell_data['RLU_'+ cell_type].replace(0, 1, inplace= True) #Replace 0 transfection with 1... maybe convert this to 0.693
-        #cell_data["Exp_" + cell_type] = np.exp(cell_data["RLU_" + cell_type])
-        #df["Exp_" + cell_type].mask(df["Exp_" + cell_type]<10, inplace=True) #Remove very low/ thus noisy transfecting formulations values
-        #cell_data["Exp_" + cell_type] = cell_data["Exp_" + cell_type] + 10 #Log(x+c) transform
-        # cell_data["RLU_" + cell_type] = np.log(cell_data["Exp_" + cell_type]) #convert back to RLU values
-        # cell_data.reset_index(drop = True, inplace=True)
+        cell_data.loc[cell_data[prefix + cell_type] < 3, prefix + cell_type] = 3 #replace all RLU values below 3 to 3
 
         print(cell_data)
 
         self.cell_data = cell_data
 
-        # #Remove the Size and Zeta Columns for comparision
-        # input_param_names = lipid_param_names +  formulation_param_names
-        # self.cell_data = self.cell_data[['Formula label', 'Helper_lipid'] + input_param_names + ['RLU_'+ cell_type]]
+      
         
         print("Input Parameters used:", input_param_names)
         print("Number of Datapoints used:", len(self.cell_data.index))
 
         self.X = self.cell_data[input_param_names]                         
-        Y = self.cell_data['RLU_' + cell_type].to_numpy()
+        Y = self.cell_data[prefix + cell_type].to_numpy()
         scaler = MinMaxScaler().fit(Y.reshape(-1,1))
         temp_Y = scaler.transform(Y.reshape(-1,1))
-        self.Y = pd.DataFrame(temp_Y, columns = ['RLU_' + cell_type])
+        self.Y = pd.DataFrame(temp_Y, columns = [prefix + cell_type])
         self.F = cell_data['Formula label']
         
     
@@ -294,7 +287,7 @@ class NESTED_CV_reformat:
           # report progress at end of each inner loop
           #Note: Test score = outerloop - hold out - dataset score
           # Best_Valid_Score = innerloop iteration score
-          print('\n################################################################\n\nSTATUS REPORT:') 
+          print('\n################################################################\n\nSTATUS REPORT:')
           print('Iteration '+str(i+1)+' of '+str(NUM_TRIALS)+' runs completed') 
           print('Best_Valid_Score: %.3f, Hold_Out_MAE: %.3f,  Hold_Out_Spearman_Rank: %.3f, Hold_Out_Pearsons_R: %.3f, \n\nBest_Model_Params: \n%s' % (best_score, acc, spearmans_rank[0], pearsons_r[0], result.best_params_))
           print("\n################################################################\n ")

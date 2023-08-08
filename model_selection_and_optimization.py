@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import pickle
+import os
 #from Nested_CV import NESTED_CV
 from Nested_CV_reformat import NESTED_CV_reformat
 
@@ -24,6 +25,10 @@ def run_NESTED_CV(model_name, data_file_path, save_path, cell, wt_percent, size_
     model_instance.best_model() 
   
 
+    # Check if save path exists (if not, then create path)
+    if os.path.exists(save_path + f'{model_name}/{cell}/') == False:
+       os.makedirs(save_path + f'{model_name}/{cell}/', 0o666)
+      
     # Save Tuning Results CSV
     with open(save_path + f'{model_name}/{cell}/{model_name}_{cell}_HP_Tuning_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
       model_instance.CV_dataset.to_csv(f)
@@ -49,23 +54,22 @@ def run_NESTED_CV(model_name, data_file_path, save_path, cell, wt_percent, size_
 def main():
   
   ################ SAVING, LOADING##########################
-  data_file_path = 'Raw_Data/7_Master_Formulas.csv' #Where to extract training data
-  save_path = "Trained_Models/rounded_3/" # Where to save model, results, and training data
+  data_file_path = 'Raw_Data/10_Master_Formulas.csv' #Where to extract training data
+  save_path = "Trained_Models/Models_Size_Zeta_new/" # Where to save model, results, and training data
 
   ############### CELLS, ALGORITHMS, PARAMETERS ####################################
   model_list = ['LGBM', 'XGB','RF', 'MLR', 'lasso', 'PLS', 'kNN', 'DT'] #Did not include SVR
   #model_list = ['MLR', 'lasso', 'PLS', 'kNN', 'DT']
   cell_type_names = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
-  #cell_type_names = ['HepG2']
   wt_percent = False
-  size_zeta = False
+  size_zeta = True
   N_CV = 5
 
   ##################### Screen and Optimize Model #####################################
   for model_type in model_list:
     for c in cell_type_names:
-      print("Algorithm used:", model_type)
-      print('Cell Type:', c)
+      print("\n Algorithm used:", model_type)
+      print('\n Cell Type:', c)
       run_NESTED_CV(model_type, data_file_path, save_path, c, wt_percent, size_zeta, CV = N_CV)
 
 if __name__ == "__main__":
