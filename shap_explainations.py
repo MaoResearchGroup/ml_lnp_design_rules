@@ -8,16 +8,6 @@ import seaborn as sns
 import os
 
 
-def init_data(filepath,cell_type_names):
-    """ Takes a full file path to a spreadsheet and an array of cell type names. 
-    Returns a dataframe with 0s replaced with 1s."""
-    df = pd.read_csv(filepath)
-    for cell_type in df.columns[-len(cell_type_names):]:
-      zero_rows = np.where(df[cell_type] == 0)
-      for i in zero_rows:
-        df[cell_type][i] = 1
-    return df
-
 def get_shap(model, X_train, input_param_names, cell_type, model_name, save_path):
   explainer = shap.Explainer(model, X_train)
   shap_values = explainer(X_train)
@@ -41,8 +31,8 @@ def get_shap(model, X_train, input_param_names, cell_type, model_name, save_path
     #shap.dependence_plot(params, shap_values, features = X_train, feature_names = input_param_names) # Dependence plot
 
 ################ Retreive Data ##############################################
-model_folder = "Trained_Models/Models_Size_Zeta_new/" 
-shap_save_path = 'SHAP_Values/Models_Size_Zeta_new/'
+model_folder = "Trained_Models/Models_Size_Zeta_PDI/" 
+shap_save_path = 'SHAP_Values/Models_Size_Zeta_PDI/'
 wt_percent = False
 size_zeta = True
 

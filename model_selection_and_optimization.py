@@ -5,7 +5,7 @@ import os
 from Nested_CV_reformat import NESTED_CV_reformat
 
 
-def run_NESTED_CV(model_name, data_file_path, save_path, cell, wt_percent, size_zeta, CV):
+def run_NESTED_CV(model_name, data_file_path, save_path, cell, wt_percent, size_zeta, PDI_cutoff, CV):
 
   """
   Function that:
@@ -19,7 +19,7 @@ def run_NESTED_CV(model_name, data_file_path, save_path, cell, wt_percent, size_
   if __name__ == '__main__':
     #model_instance = NESTED_CV(data_file_path, model_name)
     model_instance = NESTED_CV_reformat(data_file_path, model_name)
-    model_instance.input_target(cell_type = cell, wt_percent = wt_percent, size_zeta = size_zeta)
+    model_instance.input_target(cell_type = cell, wt_percent = wt_percent, size_zeta = size_zeta, PDI_cutoff = PDI_cutoff)
     model_instance.cross_validation(CV)
     model_instance.results()
     model_instance.best_model() 
@@ -55,7 +55,7 @@ def main():
   
   ################ SAVING, LOADING##########################
   data_file_path = 'Raw_Data/10_Master_Formulas.csv' #Where to extract training data
-  save_path = "Trained_Models/Models_Size_Zeta_new/" # Where to save model, results, and training data
+  save_path = "Trained_Models/Models_Size_Zeta_PDI/" # Where to save model, results, and training data
 
   ############### CELLS, ALGORITHMS, PARAMETERS ####################################
   model_list = ['LGBM', 'XGB','RF', 'MLR', 'lasso', 'PLS', 'kNN', 'DT'] #Did not include SVR
@@ -63,6 +63,7 @@ def main():
   cell_type_names = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
   wt_percent = False
   size_zeta = True
+  PDI_cutoff = 1 #Use 1 to include all data
   N_CV = 5
 
   ##################### Screen and Optimize Model #####################################
@@ -70,7 +71,7 @@ def main():
     for c in cell_type_names:
       print("\n Algorithm used:", model_type)
       print('\n Cell Type:', c)
-      run_NESTED_CV(model_type, data_file_path, save_path, c, wt_percent, size_zeta, CV = N_CV)
+      run_NESTED_CV(model_type, data_file_path, save_path, c, wt_percent, size_zeta, PDI_cutoff, CV = N_CV)
 
 if __name__ == "__main__":
     main()

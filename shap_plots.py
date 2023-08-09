@@ -29,9 +29,9 @@ def extract_training_data(data_path, cell_type_list, input_param_names):
 def main():
 
   ################ Retreive Data ##############################################
-  model_folder = "Trained_Models/Models_Size_Zeta_new/" 
-  shap_value_path = 'SHAP_Values/Models_Size_Zeta_new/'
-  plot_save_path = "Figures/SHAP/Models_Size_Zeta_new/"
+  model_folder = "Trained_Models/Models_Size_Zeta_PDI/" 
+  shap_value_path = 'SHAP_Values/Models_Size_Zeta_PDI/'
+  plot_save_path = "Figures/SHAP/Models_Size_Zeta_PDI/"
   ################ INPUT PARAMETERS ############################################
 
   wt_percent = False

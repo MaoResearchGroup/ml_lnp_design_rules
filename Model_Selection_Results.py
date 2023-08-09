@@ -149,8 +149,8 @@ def plot_AE_Box(cell_type_names, model_path, save_path):
 def main():
 
     ################ Retreive Data ##############################################
-    result_folder = "Trained_Models/Models_Size_Zeta_new/"
-    save_folder = "Figures/Model_Selection/Models_Size_Zeta_new/" 
+    result_folder = "Trained_Models/Models_Size_Zeta_PDI/"
+    save_folder = "Figures/Model_Selection/Models_Size_Zeta_PDI/" 
     cell_type_list = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
     model_list = ['LGBM', 'XGB','RF', 'MLR', 'lasso', 'PLS', 'kNN', 'DT'] 
     
