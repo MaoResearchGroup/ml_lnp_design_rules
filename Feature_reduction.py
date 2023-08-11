@@ -85,6 +85,10 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
     feature_number_list = [] # empty list to store number of features
     linkage_distance_list = [] # empty list to store the Ward'slinkage distance
 
+    best_MAE = 1
+
+
+
     for n in range(0, N_features, 1):
         # select input features to be included in this model iteration based on Ward's linkage of n/10
         cluster_ids = hierarchy.fcluster(dist_linkage, (n/N_features), criterion="distance") 
@@ -103,10 +107,26 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
                 
         feature_number_list.append(len(tested_features)) # append the number of input features to empty list
         feature_name_list.append(tested_features) # append the list of feature names to an empty list of lists
-                
-        
 
-        acc_results, spearman_results, pearson_results = evaluate_model(X_features, Y, selected_features, model, N_CV )
+
+
+        acc_results, spearman_results, pearson_results, new_model = evaluate_model(X_features, Y, selected_features, model, N_CV )
+        
+        # find best model
+        if round(np.mean(acc_results),3) <= round(best_MAE,3):
+            print('\n BEST RESULTS UPDATED\n') 
+            best_MAE = np.mean(acc_results)
+            best_model = new_model
+            best_results = [len(tested_features), tested_features, 
+                            best_MAE, np.std(spearman_results),
+                            np.mean(spearman_results), np.std(spearman_results),
+                            np.mean(pearson_results), np.std(pearson_results),
+                            n/N_features]
+
+
+            
+        
+ 
         MAE_list.append(np.mean(acc_results)) # append average MAE value to empty list
         MAE_std_list.append(np.std(acc_results)) # append average MAE value to empty list
 
@@ -119,9 +139,13 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
                     
         print('\n################################################################\n\nSTATUS REPORT:') 
         print('Iteration '+str(n+1)+' of '+str(N_features)+' completed') 
+        print('Tested_Features:', tested_features)
         print('Test_Score: %.3f' % (np.mean(acc_results)))
         print('Spearman_Score: %.3f' % (np.mean(spearman_results)))
         print('Pearson_Score: %.3f' % (np.mean(pearson_results)))
+        print('No_Best_features:', best_results[0])      
+        print('Best_Features:', best_results[1])
+                
         print("\n################################################################\n ")
     
     # create a list of tuples with results model refinement
@@ -137,7 +161,12 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
                                                          'Pearson', 'Pearson_std',
                                                          'linkage distance']) 
     
-    return results_df
+    # create a dataframe with best model information
+    best_df = pd.DataFrame(np.transpose(best_results), index= ['# of Features', 'Feature names', 'MAE', 'MAE_std', 
+                                                         'Spearman', 'Spearman_std', 
+                                                         'Pearson', 'Pearson_std',
+                                                         'linkage distance']) 
+    return results_df, best_df, best_model
 
 
 #Use to retrain current models with different feature data
@@ -150,7 +179,7 @@ def evaluate_model(X,Y, selected_features, model, N_CV):
     print("\nSELECTED FEATURES: ", selected_features)
     for i in range(10): #For loop that splits and evaluates the data ten times
 
-        print(f"\n LOOP: {i+1}/10")
+        #print(f"\n LOOP: {i+1}/10")
 
         cv_outer = KFold(n_splits=N_CV, random_state= i+1, shuffle=True)
         for j, (train_index, test_index) in enumerate(cv_outer.split(X)):
@@ -168,7 +197,7 @@ def evaluate_model(X,Y, selected_features, model, N_CV):
                     
 
             clf_sel = model # assign selected model to clf_sel
-            clf_sel.fit(X_train_sel, y_train) # fit the selected model with the training set
+            clf_sel.fit(X_train_sel, np.ravel(y_train)) # fit the selected model with the training set
             y_pred = clf_sel.predict(X_test_sel) # predict test set based on selected input features
 
             # Get Model Statistics
@@ -181,7 +210,7 @@ def evaluate_model(X,Y, selected_features, model, N_CV):
             spearman_list.append(spearman) 
             pearson_list.append(pearson) 
 
-    return acc_list, spearman_list, pearson_list
+    return acc_list, spearman_list, pearson_list, clf_sel
 
 #Use if wanted to retrain and reoptimize models with different features
 def retrain_feature_reduction_CV(model_name, data_file_path, save_path, cell, wt_percent, size_zeta, CV,input_param_names, feature):
@@ -227,7 +256,6 @@ def retrain_feature_reduction_CV(model_name, data_file_path, save_path, cell, wt
     
     print('Sucessfully save NESTED_CV Results, Final Model, and Training dataset')
     return model_instance
-
 
 #define a function called plot_feature_reduction 
 def plot_feature_reduction(stats_df, cell_type, model_name, save):
@@ -303,12 +331,7 @@ N_CV = 5
 ################ Global Variables ##############################################
 data_file_path = "Raw_Data/10_Master_Formulas.csv"
 model_folder = "Trained_Models/Models_Size_Zeta_PDI/"
-save_path = "Trained_Models/Feature_reduction_NoSizeZeta/" # Where to save new models, results, and training data
-
-
-
-
-
+save_path = "Feature_Reduction/Feature_reduction_NoSizeZeta/" # Where to save new models, results, and training data
 
 ########### MAIN ####################################
 
@@ -343,6 +366,7 @@ def main():
             os.makedirs(save_path + f'/{cell}', 0o666)
 
 
+
         #Calculate and Plot Feature Correlation
         dist_link = feature_correlation(Train_X, cell, save_path)
 
@@ -354,7 +378,7 @@ def main():
                 trained_model = pickle.load(file)
             
             #Test and save models using new Feature clusters 
-            results = eval_feature_reduction(dist_link, Train_X, Y, trained_model, N_CV)
+            results, best_results, best_model = eval_feature_reduction(dist_link, Train_X, Y, trained_model, N_CV)
 
             #Plot feature reduction results
             plot_feature_reduction(results, cell, model_name, save_path)
@@ -362,6 +386,14 @@ def main():
             #Save Results into CSV file
             with open(save_path + f'/{cell}/{model_name}_{cell}_Feature_Red_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
                 results.to_csv(f)
+
+            #Save Best Results into CSV file
+            with open(save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+                best_results.to_csv(f)
+
+            # Save the Model to pickle file
+            with open(save_path + f'/{cell}/{model_name}_{cell}_Best_Model.pkl', 'wb') as file: 
+                pickle.dump(best_model, file)
 
     #         stats_df = pd.DataFrame(columns=['Feature_No','Cluster Index','Cluster','Feature Preserved','Average MAE', 'Std MAE', 'Average Pearson', 'Std Pearson', 'Average Spearman', 'Std Spearman'])
     #         model_instance = feature_reduction_CV(model_name, data_file_path, save_path, cell_type_name, wt_percent, size_zeta, N_CV, input_param_names, 'All')
