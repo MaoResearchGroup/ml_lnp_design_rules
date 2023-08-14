@@ -29,19 +29,12 @@ def extract_training_data(data_path, cell_type_list, input_param_names):
 def main():
 
   ################ Retreive Data ##############################################
-  model_folder = "Trained_Models/Models_Size_Zeta_PDI/" 
-  shap_value_path = 'SHAP_Values/Models_Size_Zeta_PDI/'
-  plot_save_path = "Figures/SHAP/Models_Size_Zeta_PDI/"
+  shap_value_path = 'SHAP_Values/Refined_Models_SizeZeta/'
+  plot_save_path = "Figures/SHAP/Refined_Models_SizeZeta/"
   ################ INPUT PARAMETERS ############################################
-
-  wt_percent = False
   size_zeta = True
-  
-  if wt_percent == True:
-    formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
-  else:
-    formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
-                        'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio']
+  formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
+                      'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio']
   
   # lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA',
   #                      'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
