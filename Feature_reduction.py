@@ -18,18 +18,23 @@ from copy import deepcopy
 
 from Nested_CV_reformat import NESTED_CV_reformat
 
-def extract_training_data(data_path, input_params, cell, prefix, size_zeta, PDI_cutoff):
+def extract_training_data(data_path, input_params, cell, prefix, size_zeta, size_cutoff, PDI_cutoff):
     #Load Training data
     df = pd.read_csv(data_path)
-    #Remove unnecessary rows
-    cell_data = df[['Formula label', 'Helper_lipid'] + input_params + [prefix + cell]]
+    #Remove unnecessary columns
+    cell_data = df[['Formula label', 'Helper_lipid'] + input_params + ["PDI"] + [prefix + cell]]
     cell_data = cell_data.dropna() #Remove any NaN rows
     if size_zeta == True:
         cell_data = cell_data[cell_data.Size != 0] #Remove any rows where size = 0
+        cell_data = cell_data[cell_data.Size <= size_cutoff]
         cell_data = cell_data[cell_data.Zeta != 0] #Remove any rows where zeta = 0
-        cell_data = cell_data[cell_data.PDI <= PDI_cutoff] #Remove any rows where PDI > 0.45
+        cell_data = cell_data[cell_data.PDI <= PDI_cutoff] #Remove any rows where PDI > CUTOFF
+        #Remove PDI column from input features
+        cell_data.drop(columns = 'PDI', inplace = True)
 
     cell_data.loc[cell_data[prefix + cell] < 3, prefix + cell] = 3 #replace all RLU values below 3 to 3
+
+
 
     print(cell_data)
 
@@ -91,9 +96,9 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
 
 
 
-    for n in range(0, 100, 1):
+    for n in range(0, 200, 1):
         # select input features to be included in this model iteration based on Ward's linkage of n/10
-        distance = n/50
+        distance = n/100
         cluster_ids = hierarchy.fcluster(dist_linkage, distance, criterion="distance") 
         cluster_id_to_feature_ids = defaultdict(list) 
         
@@ -274,6 +279,7 @@ def plot_feature_reduction(stats_df, cell_type, model_name, save):
     # Save the plot as a high-resolution image (e.g., PNG or PDF)
     plt.savefig(save + f'{cell_type}/{cell_type}_{model_name}Feature_Reduction_Plot.png', dpi=300, bbox_inches='tight')
 
+    plt.close()
     # Show the plot
     #plt.show()
 
@@ -284,14 +290,15 @@ def plot_feature_reduction(stats_df, cell_type, model_name, save):
 ################ Model Training ##############################################
 cell_names = ['ARPE19','N2a','PC3','B16','HEK293','HepG2'] #'ARPE19','N2a',
 model_list = ['LGBM', 'XGB', 'RF']
-size_zeta = False
-PDI = 1
+size_zeta = True
+PDI = 0.45
+size_cutoff = 600
 N_CV = 5
 
 ################ Global Variables ##############################################
 data_file_path = "Raw_Data/10_Master_Formulas.csv"
-model_folder = "Trained_Models/Models_Size_Zeta_PDI/"
-save_path = "Feature_Reduction/Feature_reduction_NoSizeZeta/" # Where to save new models, results, and training data
+model_folder = "Trained_Models/Models_Size_600_Zeta_PDI_0.45/"
+save_path = "Feature_Reduction/Feature_reduction_Size_600_Zeta_PDI_0.45/" # Where to save new models, results, and training data
 
 ########### MAIN ####################################
 
@@ -313,13 +320,13 @@ def main():
                                 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
             
         if size_zeta == True:
-            input_param_names = lipid_param_names +formulation_param_names +  ['Size', 'Zeta', 'PDI']
+            input_param_names = lipid_param_names +formulation_param_names +  ['Size', 'Zeta']
         else:
             input_param_names = lipid_param_names+ formulation_param_names 
 
 
         #Get Training Data for cell
-        Train_X, Y = extract_training_data(data_file_path, input_param_names, cell, "RLU_", size_zeta, PDI)
+        Train_X, Y = extract_training_data(data_file_path, input_param_names, cell, "RLU_", size_zeta, size_cutoff, PDI)
 
         #Check/create correct save path
         if os.path.exists(save_path + f'/{cell}') == False:
@@ -367,60 +374,5 @@ def main():
             with open(save_path + f'/{cell}/{model_name}_{cell}_Best_Model.pkl', 'wb') as file: 
                 pickle.dump(best_model, file)
 
-    #         stats_df = pd.DataFrame(columns=['Feature_No','Cluster Index','Cluster','Feature Preserved','Average MAE', 'Std MAE', 'Average Pearson', 'Std Pearson', 'Average Spearman', 'Std Spearman'])
-    #         model_instance = feature_reduction_CV(model_name, data_file_path, save_path, cell_type_name, wt_percent, size_zeta, N_CV, input_param_names, 'All')
-    #         average_mae, std_mae, average_pearson, std_pearson, average_spearman, std_spearman = model_instance.stats()
-    #         Feature_No = len(input_param_names)
-    #         stats_df = stats_df.append({
-    #             'Feature_No': Feature_No,
-    #             'Cluster Index': 0,
-    #             'Cluster': 'All',
-    #             'Feature Preserved': 'All',
-    #             'Average MAE': average_mae,
-    #             'Std MAE': std_mae,
-    #             'Average Pearson': average_pearson,
-    #             'Std Pearson': std_pearson,
-    #             'Average Spearman': average_spearman,
-    #             'Std Spearman': std_spearman
-    #         }, ignore_index=True)
-
-
-    #         reduced_params = input_param_names
-    #         idx = 1; 
-    #         for cluster in clusters: 
-    #             best_feature = ''
-    #             best_mae = 10000000000
-    #             temp_params = input_param_names
-    #             for feature in cluster:
-    #                 if feature in reduced_params:
-    #                     print('Feature Preserved in Cluster' + str(idx) + ": ", feature)
-    #                     features_to_exclude = [col for col in cluster if col not in feature]
-    #                     selected_columns = [col for col in reduced_params if col not in features_to_exclude]
-    #                     model_instance = feature_reduction_CV(model_name, data_file_path, save_path, cell_type_name, wt_percent, size_zeta, N_CV, selected_columns, feature)
-    #                     average_mae, std_mae, average_pearson, std_pearson, average_spearman, std_spearman = model_instance.stats()
-    #                     if average_mae < best_mae:
-    #                         best_feature = feature
-    #                         best_mae = average_mae
-    #                         temp_params = selected_columns
-    #             Feature_No = len(selected_columns)
-    #             stats_df = stats_df.append({
-    #             'Feature_No': Feature_No,
-    #             'Cluster Index': idx,
-    #             'Cluster': cluster,
-    #             'Feature Preserved': best_feature,
-    #             'Average MAE': average_mae,
-    #             'Std MAE': std_mae,
-    #             'Average Pearson': average_pearson,
-    #             'Std Pearson': std_pearson,
-    #             'Average Spearman': average_spearman,
-    #             'Std Spearman': std_spearman
-    #             }, ignore_index=True)
-    #             reduced_params = temp_params
-    #             idx += 1
-
-    #         # save stats_df to csv
-    #         with open(save_path + f'/{cell_type_name}/Feature_Reduction_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
-    #             stats_df.to_csv(f)
-    #         plot_feature_reduction(stats_df, cell_type_name)
 if __name__ == "__main__":
     main()

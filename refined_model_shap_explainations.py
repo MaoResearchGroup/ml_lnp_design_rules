@@ -35,8 +35,8 @@ def get_shap(model, X_train, input_param_names, cell_type, model_name, save_path
 """**MAIN**"""
 def main():
   ################ Retreive Data ##############################################
-  model_folder = "Feature_Reduction/Feature_reduction_NoSizeZeta/" 
-  shap_save_path = 'SHAP_Values/Refined_Models_NoSizeZeta/'
+  model_folder = "Feature_Reduction/Feature_reduction_Size_600_Zeta_PDI_0.45/" 
+  shap_save_path = 'SHAP_Values/Feature_reduction_Size_600_Zeta_PDI_0.45/'
 
 ##################### Run Predictions ###############################
   #Training Data
@@ -76,10 +76,10 @@ def main():
       shap_values = explainer(X)
       shap_values_list.append(shap_values)
 
-      # #Get SHAP Interaction Values
-      # shap_inter_values = explainer.shap_interaction_values(train_data)
+      #Get SHAP Interaction Values
+      # shap_inter_values = explainer.shap_interaction_values(X)
       # shap_inter_list.append(shap_inter_values)
-      # #print(shap_inter_values)
+      #print(shap_inter_values)
 
       # #heat map
       # # Get absolute mean of matrices
@@ -103,9 +103,9 @@ def main():
     with open(shap_save_path + f"{model_name}_SHAP_value_list.pkl",  'wb') as file:
       pickle.dump(shap_values_list, file)
 
-    #save SHAP Interaction Values
-    with open(shap_save_path + f"{model_name}_SHAP_inter_value_list.pkl",  'wb') as file:
-      pickle.dump(shap_inter_list, file)
+    # #save SHAP Interaction Values
+    # with open(shap_save_path + f"{model_name}_SHAP_inter_value_list.pkl",  'wb') as file:
+    #   pickle.dump(shap_inter_list, file)
 
 
 if __name__ == "__main__":
