@@ -47,8 +47,6 @@ def main():
 
   #Extracting SHAP Values
   for model_name in model_list:
-    shap_values_list = []
-    shap_inter_list = []
     for c in cell_type:
       with open(model_folder + f"{c}/{model_name}_{c}_Best_Model_Results.pkl", 'rb') as file: # import trained model
                 best_results = pickle.load(file)
@@ -74,38 +72,39 @@ def main():
 
       #Get SHAP Values
       shap_values = explainer(X)
-      shap_values_list.append(shap_values)
 
-      #Get SHAP Interaction Values
-      # shap_inter_values = explainer.shap_interaction_values(X)
-      # shap_inter_list.append(shap_inter_values)
-      #print(shap_inter_values)
+      #save SHAP Values
+      if os.path.exists(shap_save_path) == False:
+        os.makedirs(shap_save_path, 0o666)
 
-      # #heat map
-      # # Get absolute mean of matrices
-      # mean_shap = np.abs(shap_inter_values).mean(0)
-      # df_inter = pd.DataFrame(mean_shap,index=input_param_names,columns=input_param_names)
+      with open(shap_save_path + f"{model_name}_{c}_SHAP_values.pkl",  'wb') as file:
+        pickle.dump(shap_values, file)
 
-      # # times off diagonal by 2
-      # df_inter.where(df_inter.values == np.diagonal(df_inter),df_inter.values*2,inplace=True)
 
-      # # display 
-      # plt.figure(figsize=(10, 10), facecolor='w', edgecolor='k')
-      # sns.set(font_scale=1.5)
-      # sns.heatmap(df_inter,cmap='coolwarm',annot=True,fmt='.3g',cbar=False)
-      # plt.yticks(rotation=0) 
-      # #plt.show()
+        
+        #Get SHAP Interaction Values
+        # shap_inter_values = explainer.shap_interaction_values(X)
+        # shap_inter_list.append(shap_inter_values)
+        #print(shap_inter_values)
 
-    #save SHAP Values
-    if os.path.exists(shap_save_path) == False:
-       os.makedirs(shap_save_path, 0o666)
+        # #heat map
+        # # Get absolute mean of matrices
+        # mean_shap = np.abs(shap_inter_values).mean(0)
+        # df_inter = pd.DataFrame(mean_shap,index=input_param_names,columns=input_param_names)
 
-    with open(shap_save_path + f"{model_name}_SHAP_value_list.pkl",  'wb') as file:
-      pickle.dump(shap_values_list, file)
+        # # times off diagonal by 2
+        # df_inter.where(df_inter.values == np.diagonal(df_inter),df_inter.values*2,inplace=True)
 
-    # #save SHAP Interaction Values
-    # with open(shap_save_path + f"{model_name}_SHAP_inter_value_list.pkl",  'wb') as file:
-    #   pickle.dump(shap_inter_list, file)
+        # # display 
+        # plt.figure(figsize=(10, 10), facecolor='w', edgecolor='k')
+        # sns.set(font_scale=1.5)
+        # sns.heatmap(df_inter,cmap='coolwarm',annot=True,fmt='.3g',cbar=False)
+        # plt.yticks(rotation=0) 
+        # #plt.show()
+
+      # #save SHAP Interaction Values
+      # with open(shap_save_path + f"{model_name}_SHAP_inter_values.pkl",  'wb') as file:
+      #   pickle.dump(shap_inter, file)
 
 
 if __name__ == "__main__":

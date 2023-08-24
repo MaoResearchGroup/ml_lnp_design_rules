@@ -59,7 +59,7 @@ def main():
   
   ################ SAVING, LOADING##########################
   data_file_path = 'Raw_Data/10_Master_Formulas.csv' #Where to extract training data
-  save_path = "Trained_Models/Models_Size_600_Zeta_PDI_0.45/" # Where to save model, results, and training data
+  save_path = "Trained_Models/Models_Size_1000_Zeta_PDI_1/" # Where to save model, results, and training data
 
   ############### CELLS, ALGORITHMS, PARAMETERS ####################################
   model_list = ['LGBM', 'XGB','RF', 'MLR', 'lasso', 'PLS', 'kNN', 'DT'] #Did not include SVR
@@ -67,8 +67,8 @@ def main():
   cell_type_names = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
   wt_percent = False
   size_zeta = True
-  size_cutoff = 600
-  PDI_cutoff = 0.45 #Use 1 to include all data
+  size_cutoff = 1000
+  PDI_cutoff = 1 #Use 1 to include all data
   N_CV = 5
 
   ##################### Screen and Optimize Model #####################################
