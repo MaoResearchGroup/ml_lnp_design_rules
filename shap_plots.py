@@ -32,20 +32,28 @@ def main():
   shap_value_path = 'SHAP_Values/Refined_Models_SizeZeta/'
   plot_save_path = "Figures/SHAP/Refined_Models_SizeZeta/"
   ################ INPUT PARAMETERS ############################################
-  size_zeta = True
-  formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
-                      'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio']
-  
-  # lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA',
-  #                      'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
-  lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP','Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds', 'Helper_MW']
-  
-  if size_zeta == True:
-    input_param_names = formulation_param_names+ lipid_param_names + ['Size', 'Zeta', 'PDI']
+  wt_percent = False
+  size = True
+  zeta = False
+  if wt_percent == True:
+    formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
   else:
-    input_param_names = formulation_param_names+ lipid_param_names 
+    formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
+                  'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'] 
+    
+  lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
+  #lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP','Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds', 'Helper_MW']
 
+  input_param_names = lipid_param_names +  formulation_param_names
+
+  #Add physiochemical parameters to inputparameters
+  if size == True:
+    input_param_names = input_param_names + ['Size', 'PDI']
+
+  if zeta == True:
+      input_param_names = input_param_names + ['Zeta']
   print(input_param_names)
+  
 ##################### Run Predictions ###############################
   #Training Data
   cell_type = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']

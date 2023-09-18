@@ -105,9 +105,10 @@ def plot_force(formulation, shap_values, cell, model, feature_order,save):
 def main():
 
   ################ Retreive Data ##############################################
-  model_folder = "Feature_Reduction/Feature_reduction_Size_600_Zeta_PDI_0.45/" 
-  shap_value_path = 'SHAP_Values/Feature_reduction_Size_600_Zeta_PDI_0.45/'
-  plot_save_path = "Figures/SHAP/Feature_reduction_Size_600_Zeta_PDI_0.45/"
+  RUN_NAME = "Feature_reduction_Size_600_Zeta_PDI_0.45"
+  model_folder = f"Feature_Reduction/{RUN_NAME}/" 
+  shap_value_path = f'SHAP_Values/{RUN_NAME}/'
+  plot_save_path = f"Figures/SHAP/{RUN_NAME}/"
  
   ##################### Run Predictions ###############################
   #Training Data

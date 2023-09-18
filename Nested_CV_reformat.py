@@ -168,42 +168,24 @@ class NESTED_CV_reformat:
         else:
           print("#######################\nSELECTION UNAVAILABLE!\n#######################\n\nPlease chose one of the following options:\n\n 'MLR'for multiple linear regression\n\n 'lasso' for multiple linear regression with east absolute shrinkage and selection operator (lasso)\n\n 'kNN'for k-Nearest Neighbors\n\n 'PLS' for partial least squares\n\n 'SVR' for support vertor regressor\n\n 'DT' for decision tree\n\n 'RF' for random forest\n\n 'LGBM' for LightGBM\n\n 'XGB' for XGBoost\n\n 'NGB' for NGBoost")
 
-    def input_target(self, cell_type, wt_percent, size_zeta, size_cutoff, PDI_cutoff):
-        prefix = "RLU_" #WARNING: HARDCODED
-        if wt_percent == True:
-          formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
-        else:
-          formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
-                        'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'] 
-          
-        lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
-        #lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP','Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds', 'Helper_MW']
-        if size_zeta == True:
-          input_param_names = lipid_param_names +  formulation_param_names + ['Size', 'Zeta', 'PDI']
-        else:
-          input_param_names = lipid_param_names +  formulation_param_names 
+    def input_target(self, cell_type, input_param_names, prefix, size_cutoff, PDI_cutoff):
         
-
         #Formatting Training Data
         cell_data = self.df[['Formula label', 'Helper_lipid'] + input_param_names + [prefix + cell_type]]
         cell_data = cell_data.dropna() #Remove any NaN rows
-        if size_zeta == True:
+
+        if "Size" in input_param_names:
           cell_data = cell_data[cell_data.Size != 0] #Remove any rows where size = 0
           cell_data = cell_data[cell_data.Size <= size_cutoff]
-          cell_data = cell_data[cell_data.Zeta != 0] #Remove any rows where zeta = 0
           cell_data = cell_data[cell_data.PDI <= PDI_cutoff] #Remove any rows where PDI > cutoff
+        if "Zeta" in  input_param_names:
+          cell_data = cell_data[cell_data.Zeta != 0] #Remove any rows where zeta = 0
 
-          # #Remove PDI column from input features
-          # cell_data.drop(columns = 'PDI', inplace = True)
 
-        cell_data.loc[cell_data[prefix + cell_type] < 3, prefix + cell_type] = 3 #replace all RLU values below 3 to 3
-
-        print(cell_data)
-
+        #replace all RLU values below 3 to 3 to reduce noise
+        cell_data.loc[cell_data[prefix + cell_type] < 3, prefix + cell_type] = 3 
         self.cell_data = cell_data
 
-      
-        
         print("Input Parameters used:", input_param_names)
         print("Number of Datapoints used:", len(self.cell_data.index))
 

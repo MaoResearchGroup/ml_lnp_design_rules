@@ -1,0 +1,10 @@
+﻿,0
+# of Features,7
+Feature names,"['P_charged_centers', 'N_charged_centers', 'Double_bonds', 'NP_ratio', 'Dlin-MC3_Helper lipid_ratio', 'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio']"
+MAE,0.08848
+MAE_std,0.025471465126173088
+Spearman,0.8442173645598361
+Spearman_std,0.025471465126173088
+Pearson,0.8335041972637889
+Pearson_std,0.025669920472627332
+linkage distance,5.615384615384615

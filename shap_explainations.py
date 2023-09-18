@@ -30,33 +30,39 @@ def get_shap(model, X_train, input_param_names, cell_type, model_name, save_path
   #for params in input_param_names:
     #shap.dependence_plot(params, shap_values, features = X_train, feature_names = input_param_names) # Dependence plot
 
-################ Retreive Data ##############################################
-model_folder = "Trained_Models/Models_Size_Zeta_PDI/" 
-shap_save_path = 'SHAP_Values/Models_Size_Zeta_PDI/'
-wt_percent = False
-size_zeta = True
-
-################ INPUT PARAMETERS ############################################
-if wt_percent == True:
-  formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
-else:
-  formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
-                      'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'] 
-
-lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA',
-                      'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
-#lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP','Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds', 'Helper_MW']
-
-if size_zeta == True:
-  input_param_names = lipid_param_names +formulation_param_names +  ['Size', 'Zeta', 'PDI']
-else:
-  input_param_names = lipid_param_names+ formulation_param_names 
 
 
 """**MAIN**"""
 def main():
+
+  ################ Retreive Data ##############################################
+  RUN_NAME = "Feature_reduction_Size_600_Zeta_PDI_0.45"
+  model_folder = f"Trained_Models/{RUN_NAME}/" 
+  shap_save_path = f'SHAP_Values/{RUN_NAME}/'
+  
+  ################ INPUT PARAMETERS ###################################
+  wt_percent = False
+  size = True
+  zeta = False
+  if wt_percent == True:
+    formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
+  else:
+    formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
+                  'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'] 
+    
+  lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'cTPSA', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
+  #lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP','Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds', 'Helper_MW']
+
+  input_param_names = lipid_param_names +  formulation_param_names
+
+  #Add physiochemical parameters to inputparameters
+  if size == True:
+    input_param_names = input_param_names + ['Size', 'PDI']
+
+  if zeta == True:
+      input_param_names = input_param_names + ['Zeta']
+
 ##################### Run Predictions ###############################
-  #Training Data
   cell_type = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
   model_list = ['LGBM', 'XGB','RF'] #Did not include SVR
   #model_list = ['RF', 'MLR', 'lasso', 'PLS', 'SVR', 'kNN', 'LGBM', 'XGB', 'DT']

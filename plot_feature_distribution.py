@@ -1,20 +1,14 @@
 import pandas as pd
-from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
-from scipy.spatial.distance import squareform
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
-from scipy.stats import spearmanr
-from sklearn.model_selection import train_test_split, KFold
-from scipy.cluster import hierarchy
-from scipy.spatial.distance import squareform
 import seaborn as sns
 import pickle
 import os
 from sklearn.preprocessing import MinMaxScaler
 from collections import defaultdict
-from sklearn.metrics import mean_absolute_error
-from copy import deepcopy
+
+import plotly.figure_factory as ff
 
 from Nested_CV_reformat import NESTED_CV_reformat
 
@@ -42,7 +36,8 @@ def extract_training_data(data_path, input_params, cell, prefix, size_zeta, size
     scaler = MinMaxScaler().fit(Y.reshape(-1,1))
     temp_Y = scaler.transform(Y.reshape(-1,1))
     Y = pd.DataFrame(temp_Y, columns = [prefix + cell])
-    return X, Y
+    helper_lipid = cell_data["Helper_lipid"]
+    return X, Y, helper_lipid
 
 
 ################ Model Training ##############################################
@@ -82,21 +77,31 @@ def main():
 
 
         #Get Training Data for cell
-        Train_X, Y = extract_training_data(data_file_path, input_param_names, cell, "RLU_", size_zeta, size, PDI)
+        Train_X, Y, helper = extract_training_data(data_file_path, input_param_names, cell, "RLU_", size_zeta, size, PDI)
 
-        #Check/create correct save path
-        if os.path.exists(save_path + f'/{cell}') == False:
-            os.makedirs(save_path + f'/{cell}', 0o666)
-        for param in Train_X.columns:
-            f = plt.figure()
-            sns.histplot(Train_X.loc[:,param])
-            plt.savefig(save_path + f'/{cell}/{param}_Dist.png', 
-                        dpi=600, format = 'png', 
-                        transparent=True, 
-                        bbox_inches='tight')
-            plt.close()
+        # #Check/create correct save path
+        # if os.path.exists(save_path + f'/{cell}') == False:
+        #     os.makedirs(save_path + f'/{cell}', 0o666)
+        # #Histogram plot for all features in training data
+        # for param in Train_X.columns:
+        #     f = plt.figure()
+        #     sns.histplot(Train_X.loc[:,param])
+        #     plt.savefig(save_path + f'/{cell}/{param}_Dist.png', 
+        #                 dpi=600, format = 'png', 
+        #                 transparent=True, 
+        #                 bbox_inches='tight')
+        #     plt.close()
 
+        
+        #distribution plot of transfection by helper lipid used
+        # lipid_tfxn = []
+        # Y["helper"] = helper
+        # print(Y)
+        # for lipid in helper.unique():
+        #     ind_tfxn = Y.loc[Y["helper"] == lipid, "RLU_" + cell]
+        #     lipid_tfxn.append(ind_tfxn.values.tolist())
 
-
+        # tfxn_dist = ff.create_distplot(lipid_tfxn, helper.unique(), bin_size=0.05)
+        # tfxn_dist.write_image(save_path + f'{cell}_tfxn_dist.svg')
 if __name__ == "__main__":
     main()

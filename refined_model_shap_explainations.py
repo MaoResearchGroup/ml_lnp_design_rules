@@ -35,8 +35,9 @@ def get_shap(model, X_train, input_param_names, cell_type, model_name, save_path
 """**MAIN**"""
 def main():
   ################ Retreive Data ##############################################
-  model_folder = "Feature_Reduction/Feature_reduction_Size_600_Zeta_PDI_0.45/" 
-  shap_save_path = 'SHAP_Values/Feature_reduction_Size_600_Zeta_PDI_0.45/'
+  RUN_NAME = "Feature_reduction_Size_600_Zeta_PDI_0.45"
+  model_folder = f"Feature_Reduction/{RUN_NAME}/" 
+  shap_save_path = f'SHAP_Values/{RUN_NAME}/'
 
 ##################### Run Predictions ###############################
   #Training Data

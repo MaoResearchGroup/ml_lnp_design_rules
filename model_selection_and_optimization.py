@@ -5,7 +5,7 @@ import os
 from Nested_CV_reformat import NESTED_CV_reformat
 
 
-def run_NESTED_CV(model_name, data_file_path, save_path, cell, wt_percent, size_zeta, size_cutoff, PDI_cutoff, CV):
+def run_NESTED_CV(model_name, data_file_path, save_path, cell, input_params, size_cutoff, PDI_cutoff, pre, CV):
 
   """
   Function that:
@@ -20,8 +20,8 @@ def run_NESTED_CV(model_name, data_file_path, save_path, cell, wt_percent, size_
     #model_instance = NESTED_CV(data_file_path, model_name)
     model_instance = NESTED_CV_reformat(data_file_path, model_name)
     model_instance.input_target(cell_type = cell, 
-                                wt_percent = wt_percent, 
-                                size_zeta = size_zeta, 
+                                input_param_names= input_params,
+                                prefix = pre,
                                 size_cutoff = size_cutoff, 
                                 PDI_cutoff = PDI_cutoff)
     model_instance.cross_validation(CV)
@@ -58,18 +58,39 @@ def run_NESTED_CV(model_name, data_file_path, save_path, cell, wt_percent, size_
 def main():
   
   ################ SAVING, LOADING##########################
+  RUN_NAME = "Models_Size_1000_PDI_1_No_Zeta"
   data_file_path = 'Raw_Data/10_Master_Formulas.csv' #Where to extract training data
-  save_path = "Trained_Models/Models_Size_1000_Zeta_PDI_1/" # Where to save model, results, and training data
+  save_path = f"Trained_Models/{RUN_NAME}/" # Where to save model, results, and training data
 
   ############### CELLS, ALGORITHMS, PARAMETERS ####################################
   model_list = ['LGBM', 'XGB','RF', 'MLR', 'lasso', 'PLS', 'kNN', 'DT'] #Did not include SVR
   #model_list = ['MLR', 'lasso', 'PLS', 'kNN', 'DT']
   cell_type_names = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
   wt_percent = False
-  size_zeta = True
+  size = True
+  zeta = False
   size_cutoff = 1000
   PDI_cutoff = 1 #Use 1 to include all data
   N_CV = 5
+
+  prefix = "RLU_" #WARNING: HARDCODED
+  if wt_percent == True:
+    formulation_param_names = ['wt_Helper', 'wt_Dlin','wt_Chol', 'wt_DMG', 'wt_pDNA']
+  else:
+    formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
+                  'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'] 
+    
+  lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
+  #lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP','Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds', 'Helper_MW']
+
+  input_param_names = lipid_param_names +  formulation_param_names
+
+  #Add physiochemical parameters to inputparameters
+  if size == True:
+    input_param_names = input_param_names + ['Size', 'PDI']
+
+  if zeta == True:
+     input_param_names = input_param_names + ['Zeta']
 
   ##################### Screen and Optimize Model #####################################
   for model_type in model_list:
@@ -77,9 +98,9 @@ def main():
       print("\n Algorithm used:", model_type)
       print('\n Cell Type:', c)
       run_NESTED_CV(model_type, data_file_path, 
-                    save_path, c, wt_percent, 
-                    size_zeta, size_cutoff, 
-                    PDI_cutoff, CV = N_CV)
+                    save_path, c, input_param_names,
+                    size_cutoff, PDI_cutoff,
+                    prefix, N_CV)
 
 if __name__ == "__main__":
     main()
