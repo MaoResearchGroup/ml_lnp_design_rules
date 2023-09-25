@@ -33,22 +33,22 @@ def get_shap(model, X_train, input_param_names, cell_type, model_name, save_path
 
 
 """**MAIN**"""
-def main():
+def main(model_list, cell_type_list, model_folder, shap_save_path):
   ################ Retreive Data ##############################################
-  RUN_NAME = "Feature_reduction_Size_600_Zeta_PDI_0.45"
-  model_folder = f"Feature_Reduction/{RUN_NAME}/" 
-  shap_save_path = f'SHAP_Values/{RUN_NAME}/'
+#   RUN_NAME = "Feature_reduction_Size_600_Zeta_PDI_0.45"
+#   model_folder = f"Feature_Reduction/{RUN_NAME}/" 
+#   shap_save_path = f'SHAP_Values/{RUN_NAME}/'
 
-##################### Run Predictions ###############################
-  #Training Data
-  cell_type = ['ARPE19','N2a','PC3','B16','HEK293','HepG2']
-  model_list = ['LGBM', 'XGB','RF'] #Did not include SVR
-  #model_list = ['RF', 'MLR', 'lasso', 'PLS', 'SVR', 'kNN', 'LGBM', 'XGB', 'DT']
+# ##################### Run Predictions ###############################
+#   #Training Data
+#   cell_type_list = ['ARPE19','N2a','PC3','B16','HEK293','HepG2']
+#   model_list = ['LGBM', 'XGB','RF'] #Did not include SVR
+#   #model_list = ['RF', 'MLR', 'lasso', 'PLS', 'SVR', 'kNN', 'LGBM', 'XGB', 'DT']
   
 
   #Extracting SHAP Values
   for model_name in model_list:
-    for c in cell_type:
+    for c in cell_type_list:
       with open(model_folder + f"{c}/{model_name}_{c}_Best_Model_Results.pkl", 'rb') as file: # import trained model
                 best_results = pickle.load(file)
       input_param_names = best_results.loc['Feature names'][0]
@@ -81,8 +81,6 @@ def main():
       with open(shap_save_path + f"{model_name}_{c}_SHAP_values.pkl",  'wb') as file:
         pickle.dump(shap_values, file)
 
-
-        
         #Get SHAP Interaction Values
         # shap_inter_values = explainer.shap_interaction_values(X)
         # shap_inter_list.append(shap_inter_values)
@@ -106,7 +104,7 @@ def main():
       # #save SHAP Interaction Values
       # with open(shap_save_path + f"{model_name}_SHAP_inter_values.pkl",  'wb') as file:
       #   pickle.dump(shap_inter, file)
-
+  
 
 if __name__ == "__main__":
     main()

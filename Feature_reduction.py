@@ -8,50 +8,13 @@ from scipy.stats import spearmanr
 from sklearn.model_selection import train_test_split, KFold
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import squareform
+from sklearn.preprocessing import MinMaxScaler
 import seaborn as sns
 import pickle
 import os
-from sklearn.preprocessing import MinMaxScaler
 from collections import defaultdict
 from sklearn.metrics import mean_absolute_error
 from copy import deepcopy
-
-from Nested_CV_reformat import NESTED_CV_reformat
-
-def extract_training_data(data_path, input_params, cell, prefix, size_cutoff, PDI_cutoff):
-    #Load Training data
-    df = pd.read_csv(data_path)
-    #Remove unnecessary columns
-    cell_data = df[['Formula label', 'Helper_lipid'] + input_params + [prefix + cell]]
-    cell_data = cell_data.dropna() #Remove any NaN rows
-
-    if "Size" in input_params:
-        cell_data = cell_data[cell_data.Size != 0] #Remove any rows where size = 0
-        cell_data = cell_data[cell_data.Size <= size_cutoff]
-        cell_data = cell_data[cell_data.PDI <= PDI_cutoff] #Remove any rows where PDI > cutoff
-    if "Zeta" in  input_params:
-        cell_data = cell_data[cell_data.Zeta != 0] #Remove any rows where zeta = 0
-
-
-    # #Remove PDI column from input features
-    # cell_data.drop(columns = 'PDI', inplace = True)
-
-    cell_data.loc[cell_data[prefix + cell] < 3, prefix + cell] = 3 #replace all RLU values below 3 to 3
-
-
-
-    print(cell_data)
-
-
-    print("Input Parameters used:", input_params)
-    print("Number of Datapoints used:", len(cell_data.index))
-
-    X = cell_data[input_params]                         
-    Y = cell_data[prefix + cell].to_numpy()
-    scaler = MinMaxScaler().fit(Y.reshape(-1,1))
-    temp_Y = scaler.transform(Y.reshape(-1,1))
-    Y = pd.DataFrame(temp_Y, columns = [prefix + cell])
-    return X, Y
 
 
 def feature_correlation(X, cell, save):
@@ -177,26 +140,27 @@ def feature_correlation(X, cell, save):
 
     # Colors - cmap="mako", cmap="viridis", cmap="Blues", cmap='RdBu', rocket, flare, "seagreen", Reds, Magma
     for color in my_list:
-        kws = dict(cbar_kws=dict(ticks=[0, 0.50, 1], orientation='horizontal'), figsize=(6, 6))
+        kws = dict(cbar_kws=dict(ticks=[0, 0.25, 0.50, 0.75, 1], orientation='horizontal'), figsize=(6, 6))
 
-    g = sns.clustermap(round(np.abs(correlations),2), method="complete", cmap=my_list[2], annot=True, 
-                annot_kws={"size": 8}, vmin=0, vmax=1, figsize=(10,10));
+    g = sns.clustermap(round(np.abs(correlations),2), method="complete", row_cluster=False, cmap=my_list[14], annot=True, 
+                annot_kws={"size": 10}, vmin=0, vmax=1, figsize=(10,10));
 
     x0, _y0, _w, _h = g.cbar_pos
 
     g.ax_cbar.set_position([x0, 1.0, g.ax_row_dendrogram.get_position().width, 0.15])
-    g.ax_cbar.set_title("Spearman's Rank Correlation")
+    g.ax_cbar.set_title("Spearman's Rank Correlation", fontsize = 12)
     g.ax_cbar.tick_params(axis='x', length=10)
     for spine in g.ax_cbar.spines:
         g.ax_cbar.spines[spine].set_color('crimson')
-        g.ax_cbar.spines[spine].set_linewidth(2)
+        g.ax_cbar.spines[spine].set_linewidth(3)
 
-    plt.tick_params(axis='y', which='both', labelsize=12)
-    plt.tick_params(axis='x', which='both', labelsize=12)
+
+    plt.tick_params(axis='y', which='both', labelsize=15)
+    plt.tick_params(axis='x', which='both', labelsize=15)
 
     plt.tight_layout()
     # #Save Figure
-    plt.savefig(save + f'{cell}/Feature_Correlation_Plot.png', dpi=300, bbox_inches='tight')
+    plt.savefig(save + f'{cell}/Feature_Correlation_Plot.png', dpi=600, transparent = True, bbox_inches='tight')
     # #plt.show()
 
 
@@ -252,10 +216,10 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
             print('\n BEST RESULTS UPDATED\n') 
             best_MAE = np.mean(acc_results)
             best_model = deepcopy(new_model)
-            
-            best_model.fit(X_features.iloc[:,selected_features], Y) #Fit best model using all data
-            best_training_data = X_features.copy(deep=True)
+            best_training_data = X_features.iloc[:,selected_features].copy(deep=True)
+            best_model.fit(best_training_data, Y) #Fit best model using all data
 
+            best_training_data = pd.concat([best_training_data, Y], axis = 1)
             best_results = [len(tested_features), tested_features, 
                             best_MAE, np.std(spearman_results),
                             np.mean(spearman_results), np.std(spearman_results),
@@ -355,41 +319,45 @@ def plot_feature_reduction(stats_df, cell_type, model_name, save):
     ax2 = ax1.twinx()
 
     # Plot the points with error bars for Average MAE
-    ax1.errorbar(stats_df['# of Features'], stats_df['MAE'], yerr=stats_df['MAE_std'], fmt='o', color='black',
-                ecolor='darkgray', elinewidth=2, capsize=4, capthick=2, label='Average MAE')
+    
+    ax1.errorbar(stats_df['# of Features'], stats_df['MAE'], yerr=stats_df['MAE_std'], fmt='o',markersize = 10, color='black',
+                ecolor='darkgray', elinewidth=3, capsize=4, capthick=3, label='Average MAE')
 
     # Draw a line connecting the points for Average MAE
-    ax1.plot(stats_df['# of Features'], stats_df['MAE'], color='blue', linewidth=1)
+    ax1.plot(stats_df['# of Features'], stats_df['MAE'], color='blue', linewidth=6)
 
     # Plot error bars for Spearman correlation coefficient
-    ax2.errorbar(stats_df['# of Features'], stats_df['Spearman'], yerr=stats_df['Spearman_std'], fmt='o', color='red',
-                ecolor='darkgray', elinewidth=2, capsize=4, capthick=2, label='Average Spearman')
+    ax2.errorbar(stats_df['# of Features'], stats_df['Spearman'], yerr=stats_df['Spearman_std'], fmt='v', markersize = 10, color='black',
+                ecolor='darkgray', elinewidth=3, capsize=5, capthick=3, label='Average Spearman')
 
     # Draw a line connecting the points for Spearman correlation coefficient
-    ax2.plot(stats_df['# of Features'], stats_df['Spearman'], color='red', linewidth=1)
+    ax2.plot(stats_df['# of Features'], stats_df['Spearman'], color='red', linewidth=6)
 
     # Plot error bars for Pearson correlation coefficient
-    ax2.errorbar(stats_df['# of Features'], stats_df['Pearson'], yerr=stats_df['Pearson_std'], fmt='o', color='green',
-                ecolor='darkgray', elinewidth=2, capsize=4, capthick=2, label='Average Pearson')
+    ax2.errorbar(stats_df['# of Features'], stats_df['Pearson'], yerr=stats_df['Pearson_std'], fmt='^', markersize = 10, color='black',
+                ecolor='darkgray', elinewidth=3, capsize=5, capthick=3, label='Average Pearson')
 
     # Draw a line connecting the points for Pearson correlation coefficient
-    ax2.plot(stats_df['# of Features'], stats_df['Pearson'], color='green', linewidth=1)
+    ax2.plot(stats_df['# of Features'], stats_df['Pearson'], color='green', linewidth=6)
+
 
     # Set labels for the x-axis and y-axes
-    ax1.set_xlabel('Number of Features')
-    ax1.set_ylabel('Average MAE')
-    ax2.set_ylabel('Correlation Coefficients')
+    ax1.set_xlabel('Number of Features', fontsize = 20)
+    ax1.set_ylabel('Average MAE', fontsize = 20)
+    ax2.set_ylabel('Correlation Coefficients', fontsize = 20)
 
     # Reverse the x-axis
     ax1.invert_xaxis()
 
     # Adjust font size and style
     plt.rcParams['font.family'] = 'Arial'
-    plt.rcParams['font.size'] = 12
+    plt.rcParams['font.size'] = 15
 
     # Set integer labels on the x-axis
-    ax1.set_xticks(range(int(stats_df['# of Features'].min()), int(stats_df['# of Features'].max()) + 1))
-
+    ax1.set_xticks(np.arange(int(stats_df['# of Features'].min()), int(stats_df['# of Features'].max()) + 1, 2))
+    ax1.set_yticks(np.linspace(0.05, 0.12, 8))
+    ax1.tick_params(axis = 'y', labelsize=15)
+    ax1.tick_params(axis = 'x', labelsize=15)
     # Combine the legends from both axes
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
@@ -401,79 +369,46 @@ def plot_feature_reduction(stats_df, cell_type, model_name, save):
     ax1.legend(lines, ['Average MAE', 'Average Spearman', 'Average Pearson'], loc='center left')
 
     # Save the plot as a high-resolution image (e.g., PNG or PDF)
-    plt.savefig(save + f'{cell_type}/{cell_type}_{model_name}Feature_Reduction_Plot.png', dpi=300, bbox_inches='tight')
+    plt.savefig(save + f'{cell_type}/{cell_type}_{model_name}_Feature_Reduction_Plot.svg', dpi=600, transparent = True, bbox_inches='tight')
 
     plt.close()
-    # Show the plot
-    #plt.show()
 
 
+def main(cell_names, model_list, model_save_path, refined_model_save_path, input_param_names, prefix, N_CV = 5 ):
 
-
-
-
-
-def main():
-    ################ Model Training ##############################################
-    cell_names = ['ARPE19','N2a','PC3','B16','HEK293','HepG2'] #'ARPE19','N2a',
-    model_list = ['LGBM', 'XGB', 'RF']
-
-    ################ Global Variables ##############################################
-    RUN_NAME = "Size_1000_PDI_1_No_Zeta"
-    data_file_path = "Raw_Data/10_Master_Formulas.csv"
-    model_folder = f"Trained_Models/Models_{RUN_NAME}/"
-    save_path = f"Feature_Reduction/Feature_reduction_{RUN_NAME}/" # Where to save new models, results, and training data
-
-    ########### MAIN ####################################
-    size = True
-    zeta = False
-    size_cutoff = 1000
-    PDI_cutoff = 1 #Use 1 to include all data
-    N_CV = 5
-    prefix = "RLU_" #WARNING: HARDCODED
-
-    # #Rerun model training based on clusters
+    #Remove PDI from input parameters as it was used as a preprocessing variable.
+    input_params = input_param_names.copy()
+    
+    while "PDI" in input_params:
+        input_params.remove("PDI")
     for cell in cell_names:
 
-        #Features to use
-        formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
-                      'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio']
-        
+        #Total carbon tails does not change for any datapoints
         if cell in ['ARPE19','N2a']:
-            #Total_Carbon_Tails Removed (It does not change in the formulations)
-            lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP',
-                                'Hbond_D', 'Hbond_A', 'Double_bonds'] 
-        else:
-            lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP',
-                                'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
-        
-        input_param_names = lipid_param_names +  formulation_param_names
-        
-        if size == True:
-            input_param_names = input_param_names + ['Size', 'PDI']
-
-        if zeta == True:
-            input_param_names = input_param_names + ['Zeta']
-
-
-
-        #Get Training Data for cell
-        Train_X, Y = extract_training_data(data_file_path, input_param_names, cell, "RLU_", size_cutoff, PDI_cutoff)
-
-        #Check/create correct save path
-        if os.path.exists(save_path + f'/{cell}') == False:
-            os.makedirs(save_path + f'/{cell}', 0o666)
-
-
-
-        #Calculate and Plot Feature Correlation
-        dist_link = feature_correlation(Train_X, cell, save_path)
+            input_params.remove("Total_Carbon_Tails")
 
 
         for model_name in model_list:
+            #Get Training Data for cell
+            with open(model_save_path + f"{model_name}/{cell}/{cell}_Training_Data.pkl", 'rb') as file: # import trained model
+                training_data = pickle.load(file)
+            Train_X = training_data[input_params]
+            Y = training_data[prefix + cell].to_numpy()
+            scaler = MinMaxScaler().fit(Y.reshape(-1,1))
+            temp_Y = scaler.transform(Y.reshape(-1,1))
+            Y = pd.DataFrame(temp_Y, columns = [prefix + cell])
+
+            #Check/create correct save path
+            if os.path.exists(refined_model_save_path + f'/{cell}') == False:
+                os.makedirs(refined_model_save_path + f'/{cell}', 0o666)
+
+
+
+            #Calculate and Plot Feature Correlation
+            dist_link = feature_correlation(Train_X, cell, refined_model_save_path)
 
             #Open correct model
-            model_path = model_folder + f'{model_name}/{cell}/{model_name}_{cell}_Trained.pkl'
+            model_path = model_save_path + f'{model_name}/{cell}/{model_name}_{cell}_Trained.pkl'
             with open(model_path, 'rb') as file: # import trained model
                 trained_model = pickle.load(file)
             
@@ -481,30 +416,30 @@ def main():
             results, best_results, best_model, best_data = eval_feature_reduction(dist_link, Train_X, Y, trained_model, N_CV)
 
             #Plot feature reduction results
-            plot_feature_reduction(results, cell, model_name, save_path)
+            plot_feature_reduction(results, cell, model_name, refined_model_save_path)
 
             #Save Results into CSV file
-            with open(save_path + f'/{cell}/{model_name}_{cell}_Feature_Red_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Feature_Red_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
                 results.to_csv(f)
 
             #Save Best Results into CSV file
-            with open(save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
                 best_results.to_csv(f)
 
             #Save Best training data into CSV file
-            with open(save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
                 best_data.to_csv(f)       
 
             #Save Best training data into pkl file
-            with open(save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.pkl', 'wb') as file:
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.pkl', 'wb') as file:
                 pickle.dump(best_data, file)
 
             #Save Best Results into pkl file
-            with open(save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.pkl', 'wb') as file:
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.pkl', 'wb') as file:
                 pickle.dump(best_results, file)
 
             # Save the Model to pickle file
-            with open(save_path + f'/{cell}/{model_name}_{cell}_Best_Model.pkl', 'wb') as file: 
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model.pkl', 'wb') as file: 
                 pickle.dump(best_model, file)
 
 if __name__ == "__main__":

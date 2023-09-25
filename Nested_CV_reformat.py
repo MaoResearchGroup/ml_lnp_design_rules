@@ -11,6 +11,7 @@ from sklearn.metrics import mean_absolute_error
 from scipy import stats
 from scipy.stats import uniform, randint
 from sklearn.model_selection import RandomizedSearchCV as RSCV
+import utilities
 
 # import model frameworks
 from sklearn.linear_model import LinearRegression
@@ -44,9 +45,8 @@ class NESTED_CV_reformat:
     """
 
     #Functions here
-    def __init__(self, datafile_path, model_type = None):
-        self.df = pd.read_csv(datafile_path)
-          
+    def __init__(self, model_type = None):
+        
         if model_type == 'MLR':
           self.user_defined_model = LinearRegression()
           self.p_grid = {'fit_intercept':[True, False],
@@ -128,7 +128,7 @@ class NESTED_CV_reformat:
           
 
         elif model_type == 'LGBM':
-          self.user_defined_model = LGBMRegressor(random_state=4)
+          self.user_defined_model = LGBMRegressor(random_state=5) #was 4
           self.p_grid ={"n_estimators":[100,150,200,250,300,400,500,600],
                         'boosting_type': ['gbdt', 'dart', 'goss'],
                         'num_leaves':[16,32,64,128,256],
@@ -168,33 +168,15 @@ class NESTED_CV_reformat:
         else:
           print("#######################\nSELECTION UNAVAILABLE!\n#######################\n\nPlease chose one of the following options:\n\n 'MLR'for multiple linear regression\n\n 'lasso' for multiple linear regression with east absolute shrinkage and selection operator (lasso)\n\n 'kNN'for k-Nearest Neighbors\n\n 'PLS' for partial least squares\n\n 'SVR' for support vertor regressor\n\n 'DT' for decision tree\n\n 'RF' for random forest\n\n 'LGBM' for LightGBM\n\n 'XGB' for XGBoost\n\n 'NGB' for NGBoost")
 
-    def input_target(self, cell_type, input_param_names, prefix, size_cutoff, PDI_cutoff):
-        
-        #Formatting Training Data
-        cell_data = self.df[['Formula label', 'Helper_lipid'] + input_param_names + [prefix + cell_type]]
-        cell_data = cell_data.dropna() #Remove any NaN rows
+    def input_target(self, data_file_path, cell_type, input_param_names, prefix, size_cutoff, PDI_cutoff):
+        self.X, self.Y, self.cell_data = utilities.extract_training_data(data_file_path=data_file_path, 
+                              input_param_names=input_param_names, 
+                              cell_type=cell_type, 
+                              size_cutoff=size_cutoff, 
+                              PDI_cutoff=PDI_cutoff, 
+                              prefix=prefix)
 
-        if "Size" in input_param_names:
-          cell_data = cell_data[cell_data.Size != 0] #Remove any rows where size = 0
-          cell_data = cell_data[cell_data.Size <= size_cutoff]
-          cell_data = cell_data[cell_data.PDI <= PDI_cutoff] #Remove any rows where PDI > cutoff
-        if "Zeta" in  input_param_names:
-          cell_data = cell_data[cell_data.Zeta != 0] #Remove any rows where zeta = 0
-
-
-        #replace all RLU values below 3 to 3 to reduce noise
-        cell_data.loc[cell_data[prefix + cell_type] < 3, prefix + cell_type] = 3 
-        self.cell_data = cell_data
-
-        print("Input Parameters used:", input_param_names)
-        print("Number of Datapoints used:", len(self.cell_data.index))
-
-        self.X = self.cell_data[input_param_names]                         
-        Y = self.cell_data[prefix + cell_type].to_numpy()
-        scaler = MinMaxScaler().fit(Y.reshape(-1,1))
-        temp_Y = scaler.transform(Y.reshape(-1,1))
-        self.Y = pd.DataFrame(temp_Y, columns = [prefix + cell_type])
-        self.F = cell_data['Formula label']
+        self.F = self.cell_data['Formula label']
         
     
     def cross_validation(self, input_value):

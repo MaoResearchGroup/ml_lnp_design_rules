@@ -6,7 +6,7 @@ import pickle
 import seaborn as sns
 import os
 
-def extraction_all(name, cell, model_path):
+def extraction_all(name, cell, model_path, N_CV):
     '''
     function that extracts and compiles a results dataframe as well as an 
     absolute error array for all modesl in NESTED_CV_results pickle files
@@ -15,7 +15,7 @@ def extraction_all(name, cell, model_path):
     
     list_of_dataframes = []
     
-    for n in range (5): #Range corresponds to number of outerloop iterations
+    for n in range (N_CV): #Range corresponds to number of outerloop iterations
         dataframe = pd.DataFrame(df['Formulation_Index'][n], columns=['Formulation_Index'])
         dataframe['Experimental_Transfection'] = df['Experimental_Transfection'][n]
         dataframe['Predicted_Transfection'] = df['Predicted_Transfection'][n]
@@ -28,17 +28,17 @@ def extraction_all(name, cell, model_path):
     
     return dataframe_all
 
-def plot_AE_Box(cell_type_names, model_path, save_path):
+def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
     for cell in cell_type_names:
         #Extract data for all models
-        ALL_MLR = extraction_all('MLR', cell, model_path)
-        ALL_lasso = extraction_all('lasso', cell, model_path)
-        ALL_kNN = extraction_all('kNN', cell, model_path)
-        ALL_PLS = extraction_all('PLS', cell, model_path)
-        ALL_DT = extraction_all('DT', cell, model_path)
-        ALL_RF = extraction_all('RF', cell, model_path)
-        ALL_LGBM = extraction_all('LGBM', cell, model_path)
-        ALL_XGB = extraction_all('XGB', cell, model_path)
+        ALL_MLR = extraction_all('MLR', cell, model_path,N_CV)
+        ALL_lasso = extraction_all('lasso', cell, model_path,N_CV)
+        ALL_kNN = extraction_all('kNN', cell, model_path,N_CV)
+        ALL_PLS = extraction_all('PLS', cell, model_path,N_CV)
+        ALL_DT = extraction_all('DT', cell, model_path,N_CV)
+        ALL_RF = extraction_all('RF', cell, model_path,N_CV)
+        ALL_LGBM = extraction_all('LGBM', cell, model_path,N_CV)
+        ALL_XGB = extraction_all('XGB', cell, model_path,N_CV)
 
         #Append into a single dataframe
         ALL_AE = pd.DataFrame(ALL_MLR['Absolute_Error'], columns=['MLR'])
@@ -64,16 +64,19 @@ def plot_AE_Box(cell_type_names, model_path, save_path):
 
         ############## PLOTTING
         # figure set-up - size
-        f, boxplot = plt.subplots(figsize=(10, 6))
+        f, boxplot = plt.subplots(figsize=(15, 6))
 
         # choose color scheme
         #palette = sns.color_palette("Paired")
         #palette = sns.color_palette("pastel")
         #palette = sns.color_palette("tab10")
-        palette = sns.color_palette("CMRmap")
+
+        sns.set_theme(font='arial')
+        palette = sns.color_palette("colorblind", as_cmap=False)
 
         # set boxplot style
         boxplot = sns.set_style("white")
+        boxplot = sns.set_theme(font='arial')
 
         # boxplot set up and box-whis style
         boxplot = sns.boxplot(palette=palette, 
@@ -97,13 +100,13 @@ def plot_AE_Box(cell_type_names, model_path, save_path):
 
         # Title - x-axis/y-axis
         #boxplot.set_xlabel("Model index", fontsize=12)
-        boxplot.set_ylabel("Absolute error (AE)", fontsize=16, color='black', 
+        boxplot.set_ylabel("Absolute error (AE)", fontsize=20, color='black', 
                         weight="bold")
         
-        boxplot.set(ylim=(-0.02, 1), yticks=np.arange(0,1,0.1))
+        boxplot.set(ylim=(-0.02, 1), yticks=np.linspace(0,1,5))
 
         # x-axis rotation and text color
-        boxplot.set_xticklabels(boxplot.get_xticklabels(),rotation = 0, color='black', fontsize=12)
+        boxplot.set_xticklabels(boxplot.get_xticklabels(),rotation = 0, color='black', fontsize=20)
 
         # x-axis and y-axis tick color
         boxplot.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
@@ -120,7 +123,7 @@ def plot_AE_Box(cell_type_names, model_path, save_path):
 
         # add tick marks on x-axis or y-axis
         boxplot.tick_params(bottom=False, left=True)
-
+        boxplot.set_yticklabels(boxplot.get_yticklabels(), size = 15)
         #statistical annotation
         #text you want to show in italics
         # x1, x2 = 0, 1  
@@ -128,38 +131,40 @@ def plot_AE_Box(cell_type_names, model_path, save_path):
         # plt.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=1, c=col)
         # plt.text((x1+x2)*.5, y+h+0.01, '$\it{p < 0.05}$', ha='center', va='bottom', color=col, fontsize=10)
 
-        # statistical annotation
-        #text you want to show in italics
-        #x1, x2 = 0, 2  
-        #y, h, col = 0.925, 0.02, 'black'
-        #plt.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=0.75, c=col)
-        #plt.text((x1+x2)*.5, y+h+0.01, '$\it{p < 0.05}$', ha='center', va='bottom', color=col)
+        # # statistical annotation
+        # # text you want to show in italics
+        # x1, x2 = 0, 2  
+        # y, h, col = 0.925, 0.02, 'black'
+        # plt.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=0.75, c=col)
+        # plt.text((x1+x2)*.5, y+h+0.01, '$\it{p < 0.05}$', ha='center', va='bottom', color=col)
 
-        plt.yticks(fontsize=12)
-        plt.xticks(fontsize=12, weight = "bold")
+        # plt.yticks(fontsize=12)
+        # plt.xticks(fontsize=12, weight = "bold")
 
         plt.tight_layout()
 
 
 
-        plt.savefig(save_path + f"{cell} Model Selection Boxplot.png", dpi=600, format = 'png', transparent=True, bbox_inches='tight')
+        plt.savefig(save_path + f"{cell} Model Selection Boxplot.svg", dpi=600, format = 'svg', transparent=True, bbox_inches='tight')
 
         #plt.show()
 
-def main():
+def main(RUN_NAME, model_folder, figure_save_path, cell_type_list, model_list, N_CV):
 
     ################ Retreive Data ##############################################
-    result_folder = "Trained_Models/Models_Size_600_Zeta_PDI_0.45/"
-    save_folder = "Figures/Model_Selection/Models_Size_600_Zeta_PDI_0.45/" 
-    cell_type_list = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
-    model_list = ['LGBM', 'XGB','RF', 'MLR', 'lasso', 'PLS', 'kNN', 'DT'] 
+    # RUN_NAME = "Models_Final_All_Size_PDI_Zeta"
+    # result_folder = f"Trained_Models/{RUN_NAME}/"
+    save_folder = figure_save_path + f"Model_Selection/{RUN_NAME}/" 
+    # #cell_type_list = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
+    # cell_type_list = ['B16']
+    # model_list = ['LGBM', 'XGB','RF', 'MLR', 'lasso', 'PLS', 'kNN', 'DT'] 
     
     ##########  Collect all Results ###############
     all_results = pd.DataFrame(columns = ['Model', 'Cell_Type', 'Valid Score', 'Test Score','Spearmans Rank','Pearsons Correlation','Model Parms', 'Experimental_Transfection','Predicted_Transfection'])
 
     for model in model_list:
         for cell in cell_type_list:
-            result_file_path = result_folder + f'{model}/{cell}/{model}_{cell}_HP_Tuning_Results.pkl'
+            result_file_path = model_folder + f'{model}/{cell}/{model}_{cell}_HP_Tuning_Results.pkl'
             with open(result_file_path, 'rb') as file:
                 results = pickle.load(file)
                 results.drop(columns = ['Iter','Formulation_Index'], inplace = True)
@@ -169,9 +174,9 @@ def main():
                 all_results = pd.concat([results, all_results.loc[:]], ignore_index = True).reset_index(drop = True)
 
     #Save results
-    if os.path.exists(result_folder) == False:
-       os.makedirs(result_folder, 0o666)
-    with open(result_folder + "Model_Selection_Results.csv", 'w', encoding = 'utf-8-sig') as f:
+    if os.path.exists(model_folder) == False:
+       os.makedirs(model_folder, 0o666)
+    with open(model_folder + "Model_Selection_Results.csv", 'w', encoding = 'utf-8-sig') as f:
         all_results.to_csv(f)
     print('Saved Results')
         
@@ -192,38 +197,55 @@ def main():
             exp_transfection.at[model, cell] = all_results[m1&m2]['Experimental_Transfection'].values[0].transpose()[0] #Format as list
     
     ########## Tabulate Results ##################
-    with open(result_folder + "Model_Selection_MAE.csv", 'w', encoding = 'utf-8-sig') as f:
+    with open(model_folder + "Model_Selection_MAE.csv", 'w', encoding = 'utf-8-sig') as f:
         MAE_results.to_csv(f)
-    with open(result_folder + "Model_Selection_spearman.csv", 'w', encoding = 'utf-8-sig') as f:
+    with open(model_folder + "Model_Selection_spearman.csv", 'w', encoding = 'utf-8-sig') as f:
         spearman_results.to_csv(f)
-    with open(result_folder + "Model_Selection_pearson.csv", 'w', encoding = 'utf-8-sig') as f:
+    with open(model_folder + "Model_Selection_pearson.csv", 'w', encoding = 'utf-8-sig') as f:
         pearson_results.to_csv(f)   
     
 
 
     #### PLOT MODEL SELECTION RESULTS ###########
-    plot_AE_Box(cell_type_list, result_folder, save_folder)
+    if os.path.exists(save_folder) == False:
+       os.makedirs(save_folder, 0o666)
+    plot_AE_Box(cell_type_list, model_folder, save_folder, N_CV)
 
     ######### Hold Out Validation Pred vs Exp. Plots ########
-    # for model_name in model_list:
-    #     fig = plt.figure(figsize=(5, 5))
-    #     for cell in cell_type:
-    #         predicted = pred_transfection.at[model_name, cell]
-    #         experimental = exp_transfection.at[model_name, cell]
+    for model_name in model_list:
+        fig = plt.figure(figsize=(8, 8))
+        for cell in cell_type_list:
+            predicted = pred_transfection.at[model_name, cell]
+            experimental = exp_transfection.at[model_name, cell]
 
-    #         sns.regplot(x = experimental, y = predicted, color = "k")
-    #         #plt.plot([0, 1], [0, 1], linestyle = 'dotted', color = 'r') #Ideal line
-    #         plt.annotate('Pearsons r = {:.2f}'.format(pearson_results.at[model, cell]), xy=(0.1, 0.9), xycoords='axes fraction', fontsize=14)
-    #         plt.annotate('Spearmans r = {:.2f}'.format(spearman_results.at[model, cell]), xy=(0.1, 0.8), xycoords='axes fraction', fontsize=14)
-    #         plt.ylabel('ML Predicted Normalized RLU', fontsize=12)
-    #         plt.xlabel('Experimental Normalized RLU', fontsize=12)
-    #         plt.xlim(-0.05, 1.05)
-    #         plt.ylim(-0.05, 1.05)
-    #         plt.title(cell, fontsize=20)
-    #         plt.tick_params(axis='both', which='major', labelsize=10)
+            sns.set_theme(font='arial', font_scale= 2)
+            reg = sns.regplot(x = experimental, y = predicted, color = "k")
+            #plt.plot([0, 1], [0, 1], linestyle = 'dotted', color = 'r') #Ideal line
+            plt.annotate('Pearsons r = {:.2f}'.format(pearson_results.at[model, cell]), xy=(0.2, 0.9), xycoords='axes fraction', fontsize=30)
+            plt.annotate('Spearmans r = {:.2f}'.format(spearman_results.at[model, cell]), xy=(0.2, 0.8), xycoords='axes fraction', fontsize=30)
+            plt.ylabel('Normalized Predicted RLU', fontsize=20)
+            plt.xlabel('Normalized Experimental RLU', fontsize=20)
+            reg.set(xlim=(-0.02, 1.02), xticks=np.linspace(0,1,5), ylim=(-0.02, 1.02), yticks=np.linspace(0,1,5))
+            reg.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
+            # add tick marks on x-axis or y-axis
+            reg.tick_params(bottom=True, left=True)
+            # x-axis and y-axis label color
+            reg.axes.yaxis.label.set_color('black')
+            reg.axes.xaxis.label.set_color('black')
+            reg.set_title(cell, fontsize=20)
 
-     
-    #     plt.savefig(save_folder+ f'/{model_name}_predictions.png', bbox_inches = 'tight')
+            reg.set_yticklabels(reg.get_yticklabels(), size = 15)
+            reg.set_xticklabels(reg.get_xticklabels(), size = 15)
+            # plt.tick_params(axis='both', which='major', labelsize=10)
+
+            reg.spines['left'].set_color('black')
+            reg.spines['bottom'].set_color('black')        # x-axis and y-axis tick color
+
+
+
+            
+            plt.savefig(save_folder + f'/{model_name}_{cell}_predictions.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
+
 
 
 if __name__ == "__main__":

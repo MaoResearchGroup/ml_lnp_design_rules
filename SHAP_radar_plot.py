@@ -69,70 +69,35 @@ def find_bin(value, bins):
     return -1
 
 
-def plot_Radar(labels, radius, comp_feats, lipid_feats, phys_feats):
-
-    #Create labels and correct angles
-    labels=np.array(labels)
-    radius=np.array(radius)
-    angles=np.linspace(0, 2 * np.pi, len(labels), endpoint = False)
-    width = np.ones(len(labels)) * 2 * np.pi/len(labels)
-
-    #Creating color list based on type of parameter
-    colors = []
-    for i in labels:
-        if i in comp_feats:
-            colors.append("green") 
-        elif i in lipid_feats:
-            colors.append("orange")
-        elif i in phys_feats:
-            colors.append("blue")
-    
-    #save index of values that are "N/A" for recoloring purposes
-    NA_index = np.argwhere(radius == "N/A").ravel().tolist()
-    print(NA_index)
-    for index in NA_index:
-        #Set "N/A" values to 1 and set color to gray
-        radius[index] = 1
-        colors[index] = "gray"
-
-    # Defining figure object to the plot
-    fig = plt.figure(figsize=(8, 8))
-
-    lowerLimit = 0
-    # Creating the axes object
-    ax = plt.axes(projection='polar')
-    ax.set_rgrids([0,1])
-    # Plotting the polar bar plot
-    print(angles)
-
-    radius = radius.astype(float)
-    print(radius)
-    #print(angles)
-    bars = ax.bar(angles, radius, width=width, bottom=lowerLimit, color=colors, alpha=0.8, edgecolor = "white")
-    # Defining the title of the plot
-    plt.title("Polar Bar Chart")
-
-
-    # Add labels
-    for bar, angle, height, label in zip(bars, angles, radius, labels):
-        # Labels are rotated
-        rotation = np.rad2deg(angle) - 90
-        # Finally add the labels
-        ax.text(
-            x=angle, 
-            y= 1.1, 
-            s=label, 
-            ha= 'center', 
-            va='center', 
-            rotation=rotation) 
+def plot_Radar(data):
+    data["Norm_Feature_Value"] = data["Norm_Feature_Value"]
+    fig = px.line_polar(data, r="Norm_Feature_Value", theta="Feature", line_close=True, start_angle= 0, width=800, height=400)
+    fig.update_traces(fill='toself')
+    # # Defining the title of the plot
+    # plt.title("Radar Chart")
+    fig.update_layout(polar = dict(radialaxis = dict(showticklabels = False)))
+    fig.update_layout(
+        font_family="Arial",
+        font_color="black",
+        font = dict(size=20)
+        )
+    fig.update_layout({
+        'plot_bgcolor':'rgba(0, 0, 0, 0)',
+        'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+        })
         
     return fig
 
 def plot_Rose(data):
-    data["Norm_Feature_Value"] = data["Norm_Feature_Value"] + 0.2
+    data["Norm_Feature_Value"] = data["Norm_Feature_Value"]
     ### pxplot
     fig = px.bar_polar(data, r="Norm_Feature_Value", theta="Feature",
-                        color="Type")
+                        color="Type", width=800, height=400)
+    fig.update_layout({
+        'plot_bgcolor':'rgba(0, 0, 0, 0)',
+        'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+        })
+        
 
     # fig.update_layout(
     #     showlegend = False,
@@ -143,38 +108,38 @@ def plot_Rose(data):
     return fig
 
 
-def main():
+def main(model_list, cell_type_list, model_save_path, shap_value_path, figure_save_path, N_bins, comp_features, lipid_features, phys_features):
     ################ Retreive/Store Data ##############################################
-    RUN_NAME = "Feature_reduction_Size_600_Zeta_PDI_0.45"
-    save_path = f"Figures/Radar/{RUN_NAME}" +"_Test/"
-    model_folder = f"Feature_Reduction/{RUN_NAME}/"
-    shap_value_path = f'SHAP_Values/{RUN_NAME}/'
+    # RUN_NAME = "Feature_reduction_Size_600_Zeta_PDI_0.45"
+    # save_path = f"Figures/Radar/{RUN_NAME}" +"_Test/"
+    # model_folder = f"Feature_Reduction/{RUN_NAME}/"
+    # shap_value_path = f'SHAP_Values/{RUN_NAME}/'
     
-    cell_type = ['ARPE19','N2a','PC3','B16','HEK293','HepG2']
+    # cell_type = ['ARPE19','N2a','PC3','B16','HEK293','HepG2']
 
-    model_list = ['LGBM', 'XGB','RF']
+    # model_list = ['LGBM', 'XGB','RF']
 
-    # #testing
-    # cell_type = ['B16']
-    # model_list = ['LGBM']
+    # # #testing
+    # # cell_type = ['B16']
+    # # model_list = ['LGBM']
 
+    # # comp_features = ['NP_ratio', 
+    # #                 'Dlin-MC3_Helper lipid_ratio',
+    # #                 'Dlin-MC3+Helper lipid percentage', 
+    # #                 'Chol_DMG-PEG_ratio']
     # comp_features = ['NP_ratio', 
-    #                 'Dlin-MC3_Helper lipid_ratio',
+    # #                'Dlin-MC3_Helper lipid_ratio',
     #                 'Dlin-MC3+Helper lipid percentage', 
     #                 'Chol_DMG-PEG_ratio']
-    comp_features = ['NP_ratio', 
-    #                'Dlin-MC3_Helper lipid_ratio',
-                    'Dlin-MC3+Helper lipid percentage', 
-                    'Chol_DMG-PEG_ratio']
     
 
-    lipid_features = ['P_charged_centers', 
-    #                  'N_charged_centers', 
-                      'Double_bonds',
-                      'cLogP', ]
+    # lipid_features = ['P_charged_centers', 
+    # #                  'N_charged_centers', 
+    #                   'Double_bonds',
+    #                   'cLogP', ]
     
 
-    phys_features = ['Size', 'Zeta']
+    # phys_features = ['Size', 'Zeta']
 
     features = comp_features + lipid_features + phys_features
     ################ INPUT PARAMETERS ############################################
@@ -182,15 +147,15 @@ def main():
 
     N_bins = 10
 
-    for c in cell_type:
+    for c in cell_type_list:
         for model in model_list:
 
             #Check save paths          
-            if os.path.exists(save_path + f'/{c}/{model}/') == False:
-                os.makedirs(save_path + f'/{c}/{model}/', 0o666)
+            if os.path.exists(figure_save_path + f'/{c}/{model}/') == False:
+                os.makedirs(figure_save_path + f'/{c}/{model}/', 0o666)
 
             #Get feature names used to train model
-            with open(model_folder + f"{c}/{model}_{c}_Best_Model_Results.pkl", 'rb') as file: # import best model results
+            with open(model_save_path + f"{c}/{model}_{c}_Best_Model_Results.pkl", 'rb') as file: # import best model results
                         best_results = pickle.load(file)
             input_param_names = best_results.loc['Feature names'][0]  
   
@@ -251,7 +216,7 @@ def main():
                         scatter = plot_scatter_line(f, combined,'Input', "SHAP", mean_storage.loc[mean_storage["Feature"] == f, ["Feature_Value", "Avg_SHAP"]],
                                                     "Feature_Value", 
                                                     "Avg_SHAP")
-                        scatter.savefig(save_path + f'/{c}/{model}/{model}_{c}_{f}_scatter.png', bbox_inches = 'tight')
+                        scatter.savefig(figure_save_path + f'/{c}/{model}/{model}_{c}_{f}_scatter.png', bbox_inches = 'tight')
                         plt.close()
 
 
@@ -269,7 +234,7 @@ def main():
                             mean_storage.loc[len(mean_storage)] = [f, feature_value, feature_value, feature_mean]
                         
                         scatter = plot_scatter(f, combined,'Input', "SHAP")
-                        scatter.savefig(save_path + f'/{c}/{model}/{model}_{c}_{f}_scatter.png', bbox_inches = 'tight')
+                        scatter.savefig(figure_save_path + f'/{c}/{model}/{model}_{c}_{f}_scatter.png', bbox_inches = 'tight')
                         plt.close()
 
 
@@ -279,7 +244,7 @@ def main():
                     feature_bar = mean_shap_bar(mean_storage.loc[mean_storage["Feature"] == f, ["Feature_Value", "Avg_SHAP"]],
                                                 "Feature_Value", 
                                                 "Avg_SHAP")
-                    feature_bar.savefig(save_path + f'/{c}/{model}/{model}_{c}_{f}_bar.png', bbox_inches = 'tight')
+                    feature_bar.savefig(figure_save_path + f'/{c}/{model}/{model}_{c}_{f}_bar.png', bbox_inches = 'tight')
                     plt.close()
                     #Find the feature value with the max average shap value and save normalized fraction
                     best_feature_value = mean_storage['Feature_Value'][mean_storage.loc[mean_storage['Feature'] == f, "Avg_SHAP"].astype(float).idxmax()]
@@ -303,17 +268,17 @@ def main():
                 
 
             #Save average shap of the features as csv
-            with open(save_path + f"/{c}/{model}/{model}_{c}_mean_shap.csv", 'w', encoding = 'utf-8-sig') as f:
+            with open(figure_save_path + f"/{c}/{model}/{model}_{c}_mean_shap.csv", 'w', encoding = 'utf-8-sig') as f:
                 mean_storage.to_csv(f)
 
             #Create radar plot of the feature value with highest average shap for each feature
-            # radar_plot = plot_Radar(features, best_feature_values, comp_features, lipid_features, phys_features)
-            # radar_plot.savefig(save_path + f'{model}_{c}_comp_radar.png', bbox_inches = 'tight')
-            # plt.close()   
-            #for type in ("comp", "lipid", "physio")
-            print(df_best_feature_values)
-            rose_plot = plot_Rose(df_best_feature_values)
-            rose_plot.write_image(save_path + f'{model}_{c}_comp_rose.svg')
+            radar_plot = plot_Radar(df_best_feature_values)
+            radar_plot.write_image(figure_save_path + f'{model}_{c}_comp_radar.svg')
+            plt.close()   
+            # #for type in ("comp", "lipid", "physio")
+            # print(df_best_feature_values)
+            # rose_plot = plot_Rose(df_best_feature_values)
+            # rose_plot.write_image(figure_save_path + f'{model}_{c}_comp_rose.svg')
 
             # #Create radar plot of the feature value with highest average shap for each feature
             # radar_plot = plot_Radar(lipid_features, best_feature_values, comp_features, lipid_features, phys_features)

@@ -15,7 +15,9 @@ def plot_summary(shap_values, cell, model, feature_order, save):
                       color_bar=False, order=feature_order, 
                       color=plt.get_cmap('viridis'))
   
-  ax1.set_title(cell, fontsize = 30)
+
+  #Plot Formatting
+  # ax1.set_title(cell, fontsize = 30)
 
 
   #Set X axis limis
@@ -23,22 +25,25 @@ def plot_summary(shap_values, cell, model, feature_order, save):
 
 
   #Format Y axis
-  ax1.tick_params(axis='y', labelsize=15)
-
+  ax1.tick_params(axis='y', labelsize=20)
+  #Format X axis
+  ax1.tick_params(axis='x', labelsize=12)
+  ax1.set_xlabel("SHAP Value (impact on model output)", font = "Arial", fontsize = 20)
 
   #Colorbar
-  cbar = plt.colorbar(label = "Feature Value",  ax = ax1, ticks = [], aspect= 10)
-  cbar.ax.text(0.5, -0.01, 'Low', transform=cbar.ax.transAxes, 
+  cbar = plt.colorbar(ax = ax1, ticks = [], aspect= 20)
+  cbar.ax.text(0.5, -0.01, 'Low', fontsize = 20, transform=cbar.ax.transAxes, 
     va='top', ha='center')
-  cbar.ax.text(0.5, 1.0, 'High', transform=cbar.ax.transAxes, 
+  cbar.ax.text(0.5, 1.0, 'High',fontsize = 20, transform=cbar.ax.transAxes, 
     va='bottom', ha='center')
+  cbar.set_label(label = "Relative Feature Value", size = 20)
 
 
   #Overall Plot Formats
-  fig.suptitle(f'{model}_{cell} SHAP Summary Plots' , horizontalalignment='right', verticalalignment='top', fontsize = 20)
-  plt.gcf().set_size_inches(6, 8)
+  # fig.suptitle(f'{model}_{cell} SHAP Summary Plots' , horizontalalignment='right', verticalalignment='top', fontsize = 20)
+  plt.gcf().set_size_inches(12, 8)
 
-  plt.savefig(save + f'{model}_{cell}_Summary.png', bbox_inches = 'tight')   
+  plt.savefig(save + f'{model}_{cell}_Summary.svg', dpi = 600, transparent = True, bbox_inches = 'tight')   
   plt.close()
 
 
@@ -61,7 +66,7 @@ def plot_importance(shap_values, cell, model, feature_order,save):
   plt.gcf().set_size_inches(6, 8)
 
   #Save plot
-  plt.savefig(save + f'{model}_{cell}_Bar.png', bbox_inches = 'tight')
+  plt.savefig(save + f'{model}_{cell}_Bar.svg', dpi = 600, transparent = True, bbox_inches = 'tight')
   plt.close()
 
 def plot_interaction(shap_values, data, cell, model, save):
@@ -102,37 +107,17 @@ def plot_force(formulation, shap_values, cell, model, feature_order,save):
   plt.savefig(save + f'{model}_{cell}_{formulation}_Force.png', bbox_inches = 'tight')  
 
 
-def main():
-
-  ################ Retreive Data ##############################################
-  RUN_NAME = "Feature_reduction_Size_600_Zeta_PDI_0.45"
-  model_folder = f"Feature_Reduction/{RUN_NAME}/" 
-  shap_value_path = f'SHAP_Values/{RUN_NAME}/'
-  plot_save_path = f"Figures/SHAP/{RUN_NAME}/"
- 
-  ##################### Run Predictions ###############################
-  #Training Data
-  cell_type_list = ['ARPE19','N2a','PC3','B16','HEK293','HepG2']
-  model_list = ['LGBM', 'XGB','RF']
-  
-
-  # cell_type_list = ['B16']
-  # model_list = ['LGBM'] #Did not include SVR
-
-  #Extracting SHAP Values
+def main(model_list, cell_type_list, model_folder, shap_value_path, plot_save_path):
   for model_name in model_list:
-
-    #SHAP Values
-    with open(shap_value_path + f"{model_name}_SHAP_value_list.pkl", "rb") as file:   # Unpickling
-      shap_values_list = pickle.load(file)
-
+    for c in cell_type_list:
+      #SHAP Values
+      with open(shap_value_path + f"{model_name}_{c}_SHAP_values.pkl", "rb") as file:   # Unpickling
+        shap_values = pickle.load(file)
+        
     # #SHAP interaction Values
-    # with open(shap_value_path + f"{model_name}_SHAP_inter_value_list.pkl", "rb") as file:   # Unpickling
+    # with open(shap_value_path + f"{model_name}_{c}_SHAP_inter_value_list.pkl", "rb") as file:   # Unpickling
     #   shap_inter_values_list = pickle.load(file)
 
-
-    for c in cell_type_list:
-      
       #Extract input parameters for each cell type
       with open(model_folder + f"{c}/{model_name}_{c}_Best_Model_Results.pkl", 'rb') as file: # import trained model
                 best_results = pickle.load(file)
@@ -149,8 +134,8 @@ def main():
           os.makedirs(plot_save_path, 0o666)
 
       #Create and save plots
-      plot_summary(shap_values_list[cell_type_list.index(c)], c, model_name, feature_order, plot_save_path)
-      plot_importance(shap_values_list[cell_type_list.index(c)], c, model_name, feature_order, plot_save_path)
+      plot_summary(shap_values, c, model_name, feature_order, plot_save_path)
+      plot_importance(shap_values, c, model_name, feature_order, plot_save_path)
       #plot_force(479, shap_values_list[cell_type_list.index(c)], c, model_name, feature_order, plot_save_path)
 
 
