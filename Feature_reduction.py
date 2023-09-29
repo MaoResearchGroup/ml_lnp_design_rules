@@ -345,7 +345,7 @@ def plot_feature_reduction(stats_df, cell_type, model_name, save):
     ax1.set_xlabel('Number of Features', fontsize = 20)
     ax1.set_ylabel('Average MAE', fontsize = 20)
     ax2.set_ylabel('Correlation Coefficients', fontsize = 20)
-
+    ax1.set_title("Feature Reduction",weight="bold", fontsize=30)
     # Reverse the x-axis
     ax1.invert_xaxis()
 
@@ -385,7 +385,8 @@ def main(cell_names, model_list, model_save_path, refined_model_save_path, input
 
         #Total carbon tails does not change for any datapoints
         if cell in ['ARPE19','N2a']:
-            input_params.remove("Total_Carbon_Tails")
+            while "Total_Carbon_Tails" in input_params:
+                input_params.remove("Total_Carbon_Tails")
 
 
         for model_name in model_list:

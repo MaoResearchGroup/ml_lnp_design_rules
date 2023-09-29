@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import run_NESTED_CV
 import Model_Selection_Results
+import plot_feature_distribution
 import Feature_reduction
 import learning_curve_plot
 import refined_model_shap_explainations
@@ -13,19 +14,20 @@ import utilities
 
 def main():
   ################ What parts of the pipeline to run ###############
-  run_model_selection   = True
+  plot_f_distribution   = False
+  run_model_selection   = False
   plot_model_selection  = False
-  run_learning_curve    = True
-  run_feature_reduction = False
-  run_SHAP_explain      = False
-  run_SHAP_plots        = False
-  plot_Rose             = False
+  run_learning_curve    = False
+  run_feature_reduction = True
+  run_SHAP_explain      = True
+  run_SHAP_plots        = True
+  plot_Rose             = True
   
   
   ################ SAVING, LOADING##########################
-  RUN_NAME = "Models_Final_All_Size_PDI_Zeta"
+  RUN_NAME = "Models_Final_All_Size_PDI0.45_Zeta_RLU2"
   data_file_path = 'Raw_Data/Final_Master_Formulas.csv' #Where to extract training data
-  figure_save_path = f"BMES_Figures/" #where to save figures
+  figure_save_path = f"Figures/" #where to save figures
   model_save_path = f"Trained_Models/{RUN_NAME}/" # Where to save model, results, and training data
   learning_curve_save_path = f"{figure_save_path}Training_size/{RUN_NAME}/" #where to save learning curve results
   refined_model_save_path = f"Feature_Reduction/{RUN_NAME}/" #where to save refined model and results
@@ -34,16 +36,16 @@ def main():
   radar_plot_save_path = f"{figure_save_path}Radar/{RUN_NAME}/"
 
   ############## CELLS, ALGORITHMS, PARAMETERS ####################################
-  #model_list = ['RF', 'MLR', 'lasso', 'PLS', 'kNN', 'LGBM', 'XGB', 'DT']#Did not include SVR 
-  model_list = ['LGBM']
-  best_model_list = ['LGBM'] 
-  # cell_type_list = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
+  model_list = ['RF', 'MLR', 'lasso', 'PLS', 'kNN', 'LGBM', 'XGB', 'DT']#Did not include SVR 
+  #model_list = ['LGBM']
+  best_model_list = ['LGBM','RF', 'XGB'] 
+  cell_type_list = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
   #model_list = ['LGBM'] 
-  cell_type_list = ['B16']
+  #cell_type_list = ['B16']
   size = True
   zeta = True
   size_cutoff = 100000
-  PDI_cutoff = 1 #Use 1 to include all data
+  PDI_cutoff = 0.45 #Use 1 to include all data
   N_CV = 5
   prefix = "RLU_" #WARNING: HARDCODED
   input_param_names = utilities.select_input_params(size, zeta)
@@ -52,6 +54,15 @@ def main():
 
   ##################### Screen and Optimize Model #####################################
   #Model Optimization and Selection
+  if plot_f_distribution:
+    plot_feature_distribution.main(cell_type_list=cell_type_list, 
+                                   data_file_path= data_file_path, 
+                                   input_param_names=input_param_names, 
+                                   save_path=figure_save_path, 
+                                   size=size_cutoff,
+                                   PDI = PDI_cutoff,
+                                   RLU_floor= 2,
+                                   prefix=prefix)
   if run_model_selection:
 
     print('\n###########################\n\n MODEL SELECTION AND OPTIMIZATION')
@@ -68,6 +79,7 @@ def main():
                       size_cutoff = size_cutoff, 
                       PDI_cutoff = PDI_cutoff,
                       prefix = prefix, 
+                      RLU_floor = 2,
                       N_CV = N_CV)
   
   # #Plotting Model Selection

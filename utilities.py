@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+import statsmodels.stats.multicomp as mc
 
 def extract_training_data(data_file_path, input_param_names, cell_type, size_cutoff, PDI_cutoff, prefix, RLU_floor = 3):
     print("############ EXTRACTING DATA ###############")
@@ -36,7 +37,7 @@ def extract_training_data(data_file_path, input_param_names, cell_type, size_cut
     Y = cell_data[prefix + cell_type].to_numpy()
     scaler = MinMaxScaler().fit(Y.reshape(-1,1))
     temp_Y = scaler.transform(Y.reshape(-1,1))
-    Y = pd.DataFrame(temp_Y, columns = ["NORM_"+prefix + cell_type])
+    Y = pd.DataFrame(temp_Y, columns = ["NORM_" + prefix + cell_type])
     return X,Y, cell_data
 
 
@@ -56,3 +57,28 @@ def select_input_params(size, zeta):
     if zeta == True:
         input_param_names = input_param_names + ['Zeta']
     return input_param_names
+
+
+
+def run_tukey(data, save_path):
+
+   # Extract the absolute error values for each model
+    absolute_errors = [data[model].tolist() for model in data.columns]
+    
+    # Flatten the list of absolute errors
+    all_errors = np.concatenate(absolute_errors)
+    
+    # Create a list of group labels
+    group_labels = [model for model in data.columns for _ in range(len(data))]
+    
+    # Perform Tukey's HSD test
+    tukey_results = mc.MultiComparison(all_errors, group_labels).tukeyhsd()
+    
+    # Convert the results to a DataFrame
+    results_df = pd.DataFrame(tukey_results._results_table.data[1:], columns=tukey_results._results_table.data[0])
+    
+    # Save the results to a CSV file
+    results_df.to_csv(f'{save_path}tukey_results.csv', index=False, )
+    
+    # # Print the results
+    # print(tukey_results)

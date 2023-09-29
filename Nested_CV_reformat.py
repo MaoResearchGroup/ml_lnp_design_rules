@@ -128,7 +128,7 @@ class NESTED_CV_reformat:
           
 
         elif model_type == 'LGBM':
-          self.user_defined_model = LGBMRegressor(random_state=5) #was 4
+          self.user_defined_model = LGBMRegressor(random_state=10) #was 4
           self.p_grid ={"n_estimators":[100,150,200,250,300,400,500,600],
                         'boosting_type': ['gbdt', 'dart', 'goss'],
                         'num_leaves':[16,32,64,128,256],
@@ -168,13 +168,14 @@ class NESTED_CV_reformat:
         else:
           print("#######################\nSELECTION UNAVAILABLE!\n#######################\n\nPlease chose one of the following options:\n\n 'MLR'for multiple linear regression\n\n 'lasso' for multiple linear regression with east absolute shrinkage and selection operator (lasso)\n\n 'kNN'for k-Nearest Neighbors\n\n 'PLS' for partial least squares\n\n 'SVR' for support vertor regressor\n\n 'DT' for decision tree\n\n 'RF' for random forest\n\n 'LGBM' for LightGBM\n\n 'XGB' for XGBoost\n\n 'NGB' for NGBoost")
 
-    def input_target(self, data_file_path, cell_type, input_param_names, prefix, size_cutoff, PDI_cutoff):
+    def input_target(self, data_file_path, cell_type, input_param_names, prefix, size_cutoff, PDI_cutoff, RLU_floor):
         self.X, self.Y, self.cell_data = utilities.extract_training_data(data_file_path=data_file_path, 
                               input_param_names=input_param_names, 
                               cell_type=cell_type, 
                               size_cutoff=size_cutoff, 
                               PDI_cutoff=PDI_cutoff, 
-                              prefix=prefix)
+                              prefix=prefix,
+                              RLU_floor= RLU_floor)
 
         self.F = self.cell_data['Formula label']
         

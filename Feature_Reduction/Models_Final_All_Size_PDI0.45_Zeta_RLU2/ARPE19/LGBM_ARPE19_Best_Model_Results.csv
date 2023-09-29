@@ -1,0 +1,10 @@
+﻿,0
+# of Features,10
+Feature names,"['P_charged_centers', 'N_charged_centers', 'cLogP', 'Hbond_D', 'NP_ratio', 'Dlin-MC3_Helper lipid_ratio', 'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio', 'Size', 'Zeta']"
+MAE,0.12005999999999999
+MAE_std,0.04524984545286477
+Spearman,0.7035358425219885
+Spearman_std,0.04524984545286477
+Pearson,0.7509855725290095
+Pearson_std,0.044418098018490074
+linkage distance,0.5833333333333334

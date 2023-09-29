@@ -7,32 +7,15 @@ import pickle
 import os
 from sklearn.preprocessing import MinMaxScaler
 from collections import defaultdict
-from utilities import extract_training_data, select_input_params
-
+from utilities import extract_training_data
 import plotly.figure_factory as ff
-
 from Nested_CV_reformat import NESTED_CV_reformat
-
-################ Model Training ##############################################
-cell_names = ['B16'] #'ARPE19','N2a',
-model_list = ['LGBM', 'XGB', 'RF']
-size_zeta = True
-PDI = 1
-size = 100000
-N_CV = 5
-
-################ Global Variables ##############################################
-data_file_path = "Raw_Data/Final_Master_Formulas.csv"
-save_path = "BMES_Figures/" # Where to save new models, results, and training data
 
 ########### MAIN ####################################
 
-def main():
-    prefix = "RLU_"
+def main(cell_type_list, data_file_path, input_param_names, save_path, size, PDI, RLU_floor, prefix):
     # #Rerun model training based on clusters
-    for cell in cell_names:
-        #Features to use
-        input_param_names = select_input_params(size_zeta, size_zeta)
+    for cell in cell_type_list:
 
         #Get Training Data for cell
         Train_X, Y, data = extract_training_data(data_file_path=data_file_path, 
@@ -41,7 +24,7 @@ def main():
                                                  size_cutoff=size, 
                                                  PDI_cutoff= PDI, 
                                                  prefix=prefix,
-                                                 RLU_floor= 0)
+                                                 RLU_floor= RLU_floor)
 
         # #Check/create correct save path
         # if os.path.exists(save_path + f'/{cell}') == False:
@@ -50,7 +33,7 @@ def main():
         # for param in Train_X.columns:
         #     f = plt.figure()
         #     sns.histplot(Train_X.loc[:,param])
-        #     plt.savefig(save_path + f'/{cell}/{param}_Dist.png', 
+        #     plt.savefig(save_path + f'{cell}_{param}_Dist.png', 
         #                 dpi=600, format = 'png', 
         #                 transparent=True, 
         #                 bbox_inches='tight')
@@ -66,7 +49,7 @@ def main():
 
         ax.set_yticklabels(ax.get_yticklabels(), size = 15)
         ax.set_xticklabels(ax.get_xticklabels(), size = 15)
-        plt.xlabel('RLU_B16', fontsize=20)
+        plt.xlabel(prefix + cell, fontsize=20)
         plt.ylabel('Counts', fontsize=20)
         #plt.legend(data.Helper_lipid.unique(), fontsize = 20)
         plt.setp(ax.get_legend().get_texts(), fontsize='20') # for legend text

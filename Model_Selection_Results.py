@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pickle
 import seaborn as sns
 import os
+import utilities
 
 def extraction_all(name, cell, model_path, N_CV):
     '''
@@ -61,6 +62,7 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
 
         df9.to_csv(save_path + f"{cell}_Figure_1_dataset.csv")
         df9.describe()
+        utilities.run_tukey(df9, save_path)
 
         ############## PLOTTING
         # figure set-up - size
@@ -76,7 +78,7 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
 
         # set boxplot style
         boxplot = sns.set_style("white")
-        boxplot = sns.set_theme(font='arial')
+        boxplot = sns.set_theme(font='Arial')
 
         # boxplot set up and box-whis style
         boxplot = sns.boxplot(palette=palette, 
@@ -88,19 +90,19 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
                                             markersize =0.5, alpha=0.2),
                             medianprops=dict(color="black", linewidth=1.0, linestyle= '--'), 
                             showmeans=True,
-                            meanprops=dict(marker="o", markerfacecolor="black", alpha=1.0,
-                                            markeredgecolor="black", markersize=4, linewidth=0.05, zorder=10))
+                            meanprops=dict(marker="o", markerfacecolor="red", alpha=1.0,
+                                            markeredgecolor="black", markersize=10, linewidth=0.05, zorder=10))
 
         # include each datapoint
         boxplot = sns.stripplot(data=df9, marker="o", edgecolor='white', 
-                                alpha=0.3, size=1.5, linewidth=0.3, color='black', jitter = True, zorder=0)
+                                alpha=0.5, size=6, linewidth=0.3, color='black', jitter = True, zorder=0)
 
         # Title
-        #boxplot.axes.set_title("ML model performance ranked by mean absolute error", fontsize=18, color="white", weight="bold")
+        boxplot.axes.set_title("Optimized Model Performance Ranked by Mean Absolute Error", font = "Arial",fontsize=30, color="Black", weight="bold")
 
         # Title - x-axis/y-axis
         #boxplot.set_xlabel("Model index", fontsize=12)
-        boxplot.set_ylabel("Absolute error (AE)", fontsize=20, color='black', 
+        boxplot.set_ylabel("Absolute error (AE)", font = "Arial", fontsize=20, color='black', 
                         weight="bold")
         
         boxplot.set(ylim=(-0.02, 1), yticks=np.linspace(0,1,5))
@@ -210,7 +212,6 @@ def main(RUN_NAME, model_folder, figure_save_path, cell_type_list, model_list, N
     if os.path.exists(save_folder) == False:
        os.makedirs(save_folder, 0o666)
     plot_AE_Box(cell_type_list, model_folder, save_folder, N_CV)
-
     ######### Hold Out Validation Pred vs Exp. Plots ########
     for model_name in model_list:
         fig = plt.figure(figsize=(8, 8))
@@ -218,13 +219,13 @@ def main(RUN_NAME, model_folder, figure_save_path, cell_type_list, model_list, N
             predicted = pred_transfection.at[model_name, cell]
             experimental = exp_transfection.at[model_name, cell]
 
-            sns.set_theme(font='arial', font_scale= 2)
+            sns.set_theme(font='Arial', font_scale= 2)
             reg = sns.regplot(x = experimental, y = predicted, color = "k")
             #plt.plot([0, 1], [0, 1], linestyle = 'dotted', color = 'r') #Ideal line
             plt.annotate('Pearsons r = {:.2f}'.format(pearson_results.at[model, cell]), xy=(0.2, 0.9), xycoords='axes fraction', fontsize=30)
             plt.annotate('Spearmans r = {:.2f}'.format(spearman_results.at[model, cell]), xy=(0.2, 0.8), xycoords='axes fraction', fontsize=30)
-            plt.ylabel('Normalized Predicted RLU', fontsize=20)
-            plt.xlabel('Normalized Experimental RLU', fontsize=20)
+            plt.ylabel('Normalized Predicted RLU', font = "Arial", fontsize=20)
+            plt.xlabel('Normalized Experimental RLU', font = "Arial", fontsize=20)
             reg.set(xlim=(-0.02, 1.02), xticks=np.linspace(0,1,5), ylim=(-0.02, 1.02), yticks=np.linspace(0,1,5))
             reg.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
             # add tick marks on x-axis or y-axis
@@ -232,7 +233,7 @@ def main(RUN_NAME, model_folder, figure_save_path, cell_type_list, model_list, N
             # x-axis and y-axis label color
             reg.axes.yaxis.label.set_color('black')
             reg.axes.xaxis.label.set_color('black')
-            reg.set_title(cell, fontsize=20)
+            reg.set_title("Hold-out Set Performance",weight="bold", fontsize=30)
 
             reg.set_yticklabels(reg.get_yticklabels(), size = 15)
             reg.set_xticklabels(reg.get_xticklabels(), size = 15)

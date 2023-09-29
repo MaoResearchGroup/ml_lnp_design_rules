@@ -84,15 +84,18 @@ def main(model_list, cell_type_list, data_file_path, save_path, model_folder,inp
 
 
             fig, ax = plt.subplots(figsize = (8, 8))
+            sns.set_theme(font='Arial', font_scale= 2)
             sns.lineplot(data = all_data.loc[(all_data['Model_Type'] == model_name) & (all_data['Cell_Type'] == cell_type)],
                                     x = "Train_size", y = "Mean_MAE", hue = "Score_Type", errorbar = "sd", linewidth = "4")
+            
             ax.spines['left'].set_color('black')
             ax.spines['bottom'].set_color('black') 
             ax.set(xlim=(0, 900), xticks=np.linspace(0,900,6), ylim=(-0, 0.14), yticks=np.linspace(0,0.14,8))
 
             ax.set_yticklabels(ax.get_yticklabels(), size = 15)
             ax.set_xticklabels(ax.get_xticklabels(), size = 15)
-            plt.title(cell_type, fontsize = 30)
+
+            plt.title("Learning Curve", weight="bold", fontsize = 30)
             plt.xlabel('Training size', fontsize=20)
             plt.ylabel('Mean Absolute Error', fontsize=20)
             plt.legend(fontsize = 20)

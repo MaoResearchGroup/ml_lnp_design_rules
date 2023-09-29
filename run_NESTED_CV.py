@@ -3,7 +3,7 @@ import os
 #from Nested_CV import NESTED_CV
 from Nested_CV_reformat import NESTED_CV_reformat
 
-def run_NESTED_CV(model_name, cell, data_file_path, save_path, input_params, size_cutoff, PDI_cutoff, prefix, N_CV):
+def run_NESTED_CV(model_name, cell, data_file_path, save_path, input_params, size_cutoff, PDI_cutoff, prefix, N_CV, RLU_floor):
 
   """
   Function that:
@@ -21,7 +21,8 @@ def run_NESTED_CV(model_name, cell, data_file_path, save_path, input_params, siz
                               input_param_names= input_params,
                               prefix = prefix,
                               size_cutoff = size_cutoff, 
-                              PDI_cutoff = PDI_cutoff)
+                              PDI_cutoff = PDI_cutoff,
+                              RLU_floor=RLU_floor)
   model_instance.cross_validation(N_CV)
   model_instance.results()
   model_instance.best_model() 
