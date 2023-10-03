@@ -99,7 +99,7 @@ def main(model_list, cell_type_list, data_file_path, save_path, model_folder,inp
             plt.xlabel('Training size', fontsize=20)
             plt.ylabel('Mean Absolute Error', fontsize=20)
             plt.legend(fontsize = 20)
-            plt.savefig(save_path + f'{model_name}_Train_size.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
+            plt.savefig(save_path + f'{model_name}_{cell_type}_Train_size.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
     # ##### Plotting
     # for model_name in model_list:
     #     fig, axes = plt.subplots(2,3, sharex = True, sharey = True, figsize = (18, 12))

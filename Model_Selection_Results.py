@@ -62,7 +62,7 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
 
         df9.to_csv(save_path + f"{cell}_Figure_1_dataset.csv")
         df9.describe()
-        utilities.run_tukey(df9, save_path)
+        utilities.run_tukey(df9, save_path, cell)
 
         ############## PLOTTING
         # figure set-up - size
@@ -148,7 +148,7 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
 
 
         plt.savefig(save_path + f"{cell} Model Selection Boxplot.svg", dpi=600, format = 'svg', transparent=True, bbox_inches='tight')
-
+        plt.close()
         #plt.show()
 
 def main(RUN_NAME, model_folder, figure_save_path, cell_type_list, model_list, N_CV):
@@ -246,7 +246,7 @@ def main(RUN_NAME, model_folder, figure_save_path, cell_type_list, model_list, N
 
             
             plt.savefig(save_folder + f'/{model_name}_{cell}_predictions.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
-
+            plt.close()
 
 
 if __name__ == "__main__":

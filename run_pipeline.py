@@ -9,7 +9,7 @@ import refined_model_shap_plots
 import SHAP_radar_plot
 import refined_model_shap_plots
 import utilities
-
+import SHAP_clustering
 
 
 def main():
@@ -21,27 +21,28 @@ def main():
   run_feature_reduction = True
   run_SHAP_explain      = True
   run_SHAP_plots        = True
+  plot_SHAP_cluster     = True
   plot_Rose             = True
   
   
   ################ SAVING, LOADING##########################
-  RUN_NAME = "Models_Final_All_Size_PDI0.45_Zeta_RLU2"
-  data_file_path = 'Raw_Data/Final_Master_Formulas.csv' #Where to extract training data
-  figure_save_path = f"Figures/" #where to save figures
-  model_save_path = f"Trained_Models/{RUN_NAME}/" # Where to save model, results, and training data
-  learning_curve_save_path = f"{figure_save_path}Training_size/{RUN_NAME}/" #where to save learning curve results
-  refined_model_save_path = f"Feature_Reduction/{RUN_NAME}/" #where to save refined model and results
-  shap_value_save_path = f'SHAP_Values/{RUN_NAME}/'
-  shap_plot_save_path = f"{figure_save_path}SHAP/{RUN_NAME}/"
-  radar_plot_save_path = f"{figure_save_path}Radar/{RUN_NAME}/"
+  RUN_NAME                  = "Models_Final_All_Size_PDI0.45_Zeta_RLU2"
+  data_file_path            = 'Raw_Data/Final_Master_Formulas.csv' #Where to extract training data
+  figure_save_path          = f"Figures/" #where to save figures
+  model_save_path           = f"Trained_Models/{RUN_NAME}/" # Where to save model, results, and training data
+  learning_curve_save_path  = f"{figure_save_path}Training_size/{RUN_NAME}/" #where to save learning curve results
+  refined_model_save_path   = f"Feature_Reduction/{RUN_NAME}/" #where to save refined model and results
+  shap_value_save_path      = f'SHAP_Values/{RUN_NAME}/'
+  shap_plot_save_path       = f"{figure_save_path}SHAP/{RUN_NAME}/"
+  shap_cluster_save_path    = f"{figure_save_path}SHAP_Clustering/{RUN_NAME}/"
+  radar_plot_save_path      = f"{figure_save_path}Radar/{RUN_NAME}/"
 
   ############## CELLS, ALGORITHMS, PARAMETERS ####################################
   model_list = ['RF', 'MLR', 'lasso', 'PLS', 'kNN', 'LGBM', 'XGB', 'DT']#Did not include SVR 
   #model_list = ['LGBM']
-  best_model_list = ['LGBM','RF', 'XGB'] 
+  best_model_list = ['LGBM', 'RF', 'XGB'] 
   cell_type_list = ['HepG2','HEK293','N2a', 'ARPE19', 'B16', 'PC3']
-  #model_list = ['LGBM'] 
-  #cell_type_list = ['B16']
+
   size = True
   zeta = True
   size_cutoff = 100000
@@ -131,7 +132,14 @@ def main():
                              model_folder = refined_model_save_path, 
                              shap_value_path = shap_value_save_path, 
                              plot_save_path = shap_plot_save_path)
-    
+  
+  if plot_SHAP_cluster:
+    print('\n###########################\n\n PLOTTING SHAP CLUSTER PLOT')
+    SHAP_clustering.main(shap_value_path=shap_value_save_path, 
+                         model_save_path=refined_model_save_path,
+                         cell_type= cell_type_list,
+                         model_list= best_model_list,
+                         figure_save_path=shap_cluster_save_path)
   if plot_Rose:
     print('\n###########################\n\n PLOTTING ROSE PLOT')
     SHAP_radar_plot.main(model_list=best_model_list, 

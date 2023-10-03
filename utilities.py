@@ -60,7 +60,7 @@ def select_input_params(size, zeta):
 
 
 
-def run_tukey(data, save_path):
+def run_tukey(data, save_path, cell):
 
    # Extract the absolute error values for each model
     absolute_errors = [data[model].tolist() for model in data.columns]
@@ -78,7 +78,7 @@ def run_tukey(data, save_path):
     results_df = pd.DataFrame(tukey_results._results_table.data[1:], columns=tukey_results._results_table.data[0])
     
     # Save the results to a CSV file
-    results_df.to_csv(f'{save_path}tukey_results.csv', index=False, )
+    results_df.to_csv(f'{save_path}{cell}_tukey_results.csv', index=False, )
     
     # # Print the results
     # print(tukey_results)

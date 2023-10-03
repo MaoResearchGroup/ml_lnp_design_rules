@@ -219,7 +219,7 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
             best_training_data = X_features.iloc[:,selected_features].copy(deep=True)
             best_model.fit(best_training_data, Y) #Fit best model using all data
 
-            best_training_data = pd.concat([best_training_data, Y], axis = 1)
+            #best_training_data = pd.concat([best_training_data, Y], axis = 1, ignore_index= True)
             best_results = [len(tested_features), tested_features, 
                             best_MAE, np.std(spearman_results),
                             np.mean(spearman_results), np.std(spearman_results),
@@ -427,6 +427,10 @@ def main(cell_names, model_list, model_save_path, refined_model_save_path, input
             with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
                 best_results.to_csv(f)
 
+            #Save Best Results into pkl file
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.pkl', 'wb') as file:
+                pickle.dump(best_results, file)
+
             #Save Best training data into CSV file
             with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
                 best_data.to_csv(f)       
@@ -435,9 +439,13 @@ def main(cell_names, model_list, model_save_path, refined_model_save_path, input
             with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.pkl', 'wb') as file:
                 pickle.dump(best_data, file)
 
-            #Save Best Results into pkl file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.pkl', 'wb') as file:
-                pickle.dump(best_results, file)
+            #Save Y into CSV file
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_output.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+                Y.to_csv(f)       
+
+            #Save Best training data into pkl file
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_output.pkl', 'wb') as file:
+                pickle.dump(Y, file)
 
             # Save the Model to pickle file
             with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model.pkl', 'wb') as file: 
