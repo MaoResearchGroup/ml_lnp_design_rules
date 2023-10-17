@@ -13,7 +13,7 @@ def plot_summary(shap_values, cell, model, feature_order, save):
   ax1 = fig.add_subplot(111)
   shap.plots.beeswarm(shap_values, max_display=15,show=False,
                       color_bar=False, order=feature_order, 
-                      color=plt.get_cmap('viridis'))
+                      color=plt.get_cmap('viridis_r'))
   
 
   #Plot Formatting
@@ -107,9 +107,11 @@ def plot_force(formulation, shap_values, cell, model, feature_order,save):
   plt.savefig(save + f'{model}_{cell}_{formulation}_Force.png', bbox_inches = 'tight')  
 
 
-def main(model_list, cell_type_list, model_folder, shap_value_path, plot_save_path):
-  for model_name in model_list:
-    for c in cell_type_list:
+def main(cell_model_list, model_folder, shap_value_path, plot_save_path):
+  print("BUMP PLOT")
+  for cell_model in cell_model_list:
+      c = cell_model[0]
+      model_name = cell_model[1]
       #SHAP Values
       with open(shap_value_path + f"{model_name}_{c}_SHAP_values.pkl", "rb") as file:   # Unpickling
         shap_values = pickle.load(file)

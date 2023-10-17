@@ -110,43 +110,12 @@ def plot_Rose(data):
 
 def main(model_list, cell_type_list, model_save_path, shap_value_path, figure_save_path, N_bins, comp_features, lipid_features, phys_features):
     ################ Retreive/Store Data ##############################################
-    # RUN_NAME = "Feature_reduction_Size_600_Zeta_PDI_0.45"
-    # save_path = f"Figures/Radar/{RUN_NAME}" +"_Test/"
-    # model_folder = f"Feature_Reduction/{RUN_NAME}/"
-    # shap_value_path = f'SHAP_Values/{RUN_NAME}/'
-    
-    # cell_type = ['ARPE19','N2a','PC3','B16','HEK293','HepG2']
-
-    # model_list = ['LGBM', 'XGB','RF']
-
-    # # #testing
-    # # cell_type = ['B16']
-    # # model_list = ['LGBM']
-
-    # # comp_features = ['NP_ratio', 
-    # #                 'Dlin-MC3_Helper lipid_ratio',
-    # #                 'Dlin-MC3+Helper lipid percentage', 
-    # #                 'Chol_DMG-PEG_ratio']
-    # comp_features = ['NP_ratio', 
-    # #                'Dlin-MC3_Helper lipid_ratio',
-    #                 'Dlin-MC3+Helper lipid percentage', 
-    #                 'Chol_DMG-PEG_ratio']
-    
-
-    # lipid_features = ['P_charged_centers', 
-    # #                  'N_charged_centers', 
-    #                   'Double_bonds',
-    #                   'cLogP', ]
-    
-
-    # phys_features = ['Size', 'Zeta']
-
     features = comp_features + lipid_features + phys_features
     ################ INPUT PARAMETERS ############################################
     #cell_type_names = ['HEK293','HepG2', 'N2a', 'ARPE19', 'B16', 'PC3']
 
     N_bins = 10
-
+    
     for c in cell_type_list:
         for model in model_list:
 

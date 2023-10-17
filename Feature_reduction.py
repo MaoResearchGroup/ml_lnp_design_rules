@@ -2,6 +2,8 @@ import pandas as pd
 from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
 from scipy.spatial.distance import squareform
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib
 import numpy as np
 from scipy import stats
 from scipy.stats import spearmanr
@@ -61,11 +63,11 @@ def feature_correlation(X, cell, save):
 
     corr_X = X
     correlations = corr_X.corr()
-    sns.heatmap(round(np.abs(correlations),2), annot=True, 
-                annot_kws={"size": 7}, vmin=0, vmax=1);
+    # sns.heatmap(round(np.abs(correlations),2), annot=True, 
+    #             annot_kws={"size": 7}, vmin=0, vmax=1);
 
 
-    plt.figure(figsize=(12,5))
+    # plt.figure(figsize=(12,5))
     dissimilarity = 1 - abs(correlations)
     Z = linkage(squareform(dissimilarity), 'complete')
 
@@ -89,39 +91,8 @@ def feature_correlation(X, cell, save):
             df_to_append = pd.DataFrame(corr_X[i])
             clustered = pd.concat([clustered, df_to_append], axis=1)
 
-    plt.figure(figsize=(10,10))
+    # plt.figure(figsize=(10,10))
     correlations = clustered.corr()
-    plot = sns.heatmap(round(correlations,2), cmap='mako', annot=True, 
-                annot_kws={"size": 7}, vmin=-1, vmax=1);
-
-
-
-    plt.figure(figsize=(15,10))
-
-    for idx, t in enumerate(np.arange(0.2,1.1,0.1)):
-        
-        # Subplot idx + 1
-        plt.subplot(3, 3, idx+1)
-        
-        # Calculate the cluster
-        labels = fcluster(Z, t, criterion='distance')
-
-        # Keep the indices to sort labels
-        labels_order = np.argsort(labels)
-
-        # Build a new dataframe with the sorted columns
-        for idx, i in enumerate(corr_X.columns[labels_order]):
-            if idx == 0:
-                clustered = pd.DataFrame(corr_X[i])
-            else:
-                df_to_append = pd.DataFrame(corr_X[i])
-                clustered = pd.concat([clustered, df_to_append], axis=1)
-                
-        # Plot the correlation heatmap
-        correlations = clustered.corr()
-        sns.heatmap(round(correlations,2), cmap='RdBu', vmin=-1, vmax=1, 
-                    xticklabels=False, yticklabels=False)
-        plt.title("Threshold = {}".format(round(t,2)))
 
 
     my_list = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 
@@ -139,25 +110,24 @@ def feature_correlation(X, cell, save):
             'gnuplot_r', 'gray', 'gray_r', 'hot', 'hot_r', 'hsv', 'hsv_r', 'icefire', 'icefire_r', 'inferno', 'inferno_r', 'jet', 'jet_r']
 
     # Colors - cmap="mako", cmap="viridis", cmap="Blues", cmap='RdBu', rocket, flare, "seagreen", Reds, Magma
-    for color in my_list:
-        kws = dict(cbar_kws=dict(ticks=[0, 0.25, 0.50, 0.75, 1], orientation='horizontal'), figsize=(6, 6))
+    #fig, ax = plt.subplots()
+    kws = dict(cbar_kws=dict(ticks=[0, 0.50, 1], orientation='vertical'), figsize=(12, 12))
+    g = sns.clustermap(round(np.abs(correlations),2), method="complete", cmap= "flare", annot=True, 
+                annot_kws={"size": 12}, vmin=0, vmax=1, cbar_pos = None, **kws)
 
-    g = sns.clustermap(round(np.abs(correlations),2), method="complete", row_cluster=False, cmap=my_list[14], annot=True, 
-                annot_kws={"size": 10}, vmin=0, vmax=1, figsize=(10,10));
+    # x0, _y0, _w, _h = g.cbar_pos
 
-    x0, _y0, _w, _h = g.cbar_pos
-
-    g.ax_cbar.set_position([x0, 1.0, g.ax_row_dendrogram.get_position().width, 0.15])
-    g.ax_cbar.set_title("Spearman's Rank Correlation", fontsize = 12)
-    g.ax_cbar.tick_params(axis='x', length=10)
-    for spine in g.ax_cbar.spines:
-        g.ax_cbar.spines[spine].set_color('crimson')
-        g.ax_cbar.spines[spine].set_linewidth(3)
+    # g.ax_cbar.set_position([x0, .9, g.ax_row_dendrogram.get_position().width, 0.02])
+    # g.ax_cbar.set_title("Spearman's Rank Correlation", fontsize = 12)
+    # g.ax_cbar.tick_params(axis='x', length=5)
+    # for spine in g.ax_cbar.spines:
+    #     g.ax_cbar.spines[spine].set_color('black')
+    #     g.ax_cbar.spines[spine].set_linewidth(2)
 
 
-    plt.tick_params(axis='y', which='both', labelsize=15)
-    plt.tick_params(axis='x', which='both', labelsize=15)
-
+    plt.tick_params(axis='y', which='both', labelsize=20)
+    plt.tick_params(axis='x', which='both', labelsize=20)
+    #sns.set(xlabel = None, ylabel = None)
     plt.tight_layout()
     # #Save Figure
     plt.savefig(save + f'{cell}/Feature_Correlation_Plot.png', dpi=600, transparent = True, bbox_inches='tight')
@@ -181,39 +151,92 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
     linkage_distance_list = [] # empty list to store the Ward'slinkage distance
 
     best_MAE = 1
+    previous_MAE = 1
 
-
-
-    for n in range(0, 200, 1):
+    #Determine ordered list of features to remove
+    ordered_feature_removal_list = []
+    for n in range(0, 400, 1):
         # select input features to be included in this model iteration based on Ward's linkage of n/10
-        distance = n/100
+        features_to_remove = []
+        distance = n/200
         cluster_ids = hierarchy.fcluster(dist_linkage, distance, criterion="distance") 
         cluster_id_to_feature_ids = defaultdict(list) 
         
         for idx, cluster_id in enumerate(cluster_ids):
             cluster_id_to_feature_ids[cluster_id].append(idx)
-                
+
         selected_features = [v[0] for v in cluster_id_to_feature_ids.values()]
+
         linkage_distance_list.append(distance) # append linkage distance to empty list
 
-        tested_features = []  # create empty list to save feature names
+        retained_features = []  # create empty list to save feature names
             
         for feature in selected_features: # for loop to append the utilized input feature names to the empty list
-            tested_features.append(X_features.columns[feature])
-        
-        #If the number of selected features is not less than previous, than skip iteration
-        if len(tested_features) >= N_feature_tracker:
+            retained_features.append(X_features.columns[feature])
+        for initial_feature in X_features.columns:
+            if initial_feature not in retained_features:
+                features_to_remove.append(initial_feature)
+
+        if len(features_to_remove) <= len(ordered_feature_removal_list):
             continue
+        
+        #Add new removed feature to ordered feature list
+        for feature in features_to_remove:
+            if feature not in ordered_feature_removal_list:
+                ordered_feature_removal_list.append(feature)
 
-        feature_number_list.append(len(tested_features)) # append the number of input features to empty list
-        feature_name_list.append(tested_features) # append the list of feature names to an empty list of lists
 
-        print("\nSELECTED FEATURES: ", tested_features)
+
+    
+    #test how the feature removal affects performance
+    #if better or equal remove feature and update feature list
+    #if worse do not remove feature and continue testing the new feature
+
+    initial_feature_list = X_features.columns.tolist() #Start with all features
+
+    removed_feature_list = []
+
+    #Evaluate model with all features to find the best MAE
+    acc_results,spearman_results,pearson_results, _ = evaluate_model(X_features, Y, range(len(initial_feature_list)), model, N_CV)
+    best_MAE = np.mean(acc_results)
+
+    #append initial data to storage lists
+    MAE_list.append(np.mean(acc_results)) # append average MAE value to empty list
+    MAE_std_list.append(np.std(acc_results)) # append average MAE value to empty list
+
+    spear_list.append(np.mean(spearman_results)) # append average MAE value to empty list
+    spear_std_list.append(np.std(spearman_results)) # append average MAE value to empty list
+
+    pear_list.append(np.mean(pearson_results)) # append average MAE value to empty list
+    pear_std_list.append(np.std(pearson_results)) # append average MAE value to empty list
+    print(f'\n INITAL MAE IS {best_MAE}')
+
+    #Remove the first feature from the ordered feature removal list from all features
+    iteration = 0
+    for feature in ordered_feature_removal_list:
+        tested_features = initial_feature_list.copy()
+
+        #Remove features from feature list
+        if feature in initial_feature_list:
+            tested_features.remove(feature)
+
+
+        print(f"\nTESTING WHEN {feature} IS REMOVED")
+        print("\nNo. FEATURES for TESTING: ", len(tested_features))
+        selected_features = [X_features.columns.get_loc(col) for col in tested_features]
         acc_results, spearman_results, pearson_results, new_model = evaluate_model(X_features, Y, selected_features, model, N_CV)
-        N_feature_tracker = len(tested_features)
-        # find best model
+
+        
+        # If the performance is equal or worse than previous than update parameters else keep the feature
         if round(np.mean(acc_results),3) <= round(best_MAE,3):
-            print('\n BEST RESULTS UPDATED\n') 
+            print(f'\n\n {feature} WAS REMOVED AND BEST RESULTS UPDATED\n\n') 
+
+            feature_number_list.append(len(tested_features)) # append the number of input features to empty list
+            feature_name_list.append(tested_features) # append the list of feature names to an empty list of lists
+            initial_feature_list = tested_features #update the initial feature list to remove feature
+            removed_feature_list.append(feature)
+
+            #update best results
             best_MAE = np.mean(acc_results)
             best_model = deepcopy(new_model)
             best_training_data = X_features.iloc[:,selected_features].copy(deep=True)
@@ -221,48 +244,55 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
 
             #best_training_data = pd.concat([best_training_data, Y], axis = 1, ignore_index= True)
             best_results = [len(tested_features), tested_features, 
+                            removed_feature_list,
                             best_MAE, np.std(spearman_results),
                             np.mean(spearman_results), np.std(spearman_results),
                             np.mean(pearson_results), np.std(pearson_results),
                             n/N_features]
  
-        MAE_list.append(np.mean(acc_results)) # append average MAE value to empty list
-        MAE_std_list.append(np.std(acc_results)) # append average MAE value to empty list
+            # Only append new reduction data if sucessful
+            MAE_list.append(np.mean(acc_results)) # append average MAE value to empty list
+            MAE_std_list.append(np.std(acc_results)) # append average MAE value to empty list
 
-        spear_list.append(np.mean(spearman_results)) # append average MAE value to empty list
-        spear_std_list.append(np.std(spearman_results)) # append average MAE value to empty list
+            spear_list.append(np.mean(spearman_results)) # append average MAE value to empty list
+            spear_std_list.append(np.std(spearman_results)) # append average MAE value to empty list
 
-        pear_list.append(np.mean(pearson_results)) # append average MAE value to empty list
-        pear_std_list.append(np.std(pearson_results)) # append average MAE value to empty list
+            pear_list.append(np.mean(pearson_results)) # append average MAE value to empty list
+            pear_std_list.append(np.std(pearson_results)) # append average MAE value to empty list
 
-                    
+        iteration += 1     
         print('\n################################################################\n\nSTATUS REPORT:') 
-        print('Iteration '+str(n+1)+' of '+str(100)+' completed') 
+        #print('Iteration '+str(n+1)+' of '+str(400)+' completed') 
+        print('Iteration '+str(iteration)+' of '+str(len(ordered_feature_removal_list))+' completed') 
         print('No_Tested_Features:', len(tested_features))
-        print('Ward Linkage Distance:', distance)
+        #print('Ward Linkage Distance:', distance)
         print('Test_Score: %.3f' % (np.mean(acc_results)))
         print('Spearman_Score: %.3f' % (np.mean(spearman_results)))
         print('Pearson_Score: %.3f' % (np.mean(pearson_results)))
         print('No_Best_features:', best_results[0])      
         print('Best_Features:', best_results[1])
+        print('Currently removed features', best_results[2])
                 
         print("\n################################################################\n ")
     
     # create a list of tuples with results model refinement
-    list_of_tuples = list(zip(feature_number_list, feature_name_list, MAE_list, MAE_std_list, 
+    list_of_tuples = list(zip(feature_number_list, feature_name_list, removed_feature_list, 
+                              MAE_list, MAE_std_list, 
                               spear_list, spear_std_list, 
                               pear_list, pear_std_list, 
                               linkage_distance_list)) 
     
 
     # create a dataframe with results model refinement
-    results_df = pd.DataFrame(list_of_tuples, columns = ['# of Features', 'Feature names', 'MAE', 'MAE_std', 
+    results_df = pd.DataFrame(list_of_tuples, columns = ['# of Features', 'Feature names', 'Removed Feature Names', 
+                                                         'MAE', 'MAE_std', 
                                                          'Spearman', 'Spearman_std', 
                                                          'Pearson', 'Pearson_std',
                                                          'linkage distance']) 
     
     # create a dataframe with best model information
-    best_df = pd.DataFrame(np.transpose(best_results), index= ['# of Features', 'Feature names', 'MAE', 'MAE_std', 
+    best_df = pd.DataFrame(np.transpose(best_results), index= ['# of Features', 'Feature names', 'Removed Feature Names', 
+                                                               'MAE', 'MAE_std', 
                                                          'Spearman', 'Spearman_std', 
                                                          'Pearson', 'Pearson_std',
                                                          'linkage distance']) 
@@ -274,7 +304,6 @@ def evaluate_model(X,Y, selected_features, model, N_CV):
     acc_list = []
     spearman_list = []
     pearson_list = []
-
     #Kfold CV
     for i in range(10): #For loop that splits and evaluates the data ten times
 
@@ -321,28 +350,28 @@ def plot_feature_reduction(stats_df, cell_type, model_name, save):
     # Plot the points with error bars for Average MAE
     
     ax1.errorbar(stats_df['# of Features'], stats_df['MAE'], yerr=stats_df['MAE_std'], fmt='o',markersize = 10, color='black',
-                ecolor='darkgray', elinewidth=3, capsize=4, capthick=3, label='Average MAE')
+                ecolor='darkgray', elinewidth=3, capsize=4, capthick=3, alpha = 0.6, label='Average MAE')
 
     # Draw a line connecting the points for Average MAE
-    ax1.plot(stats_df['# of Features'], stats_df['MAE'], color='blue', linewidth=6)
+    ax1.plot(stats_df['# of Features'], stats_df['MAE'], color='blue', alpha = 0.8, linewidth=6)
 
     # Plot error bars for Spearman correlation coefficient
     ax2.errorbar(stats_df['# of Features'], stats_df['Spearman'], yerr=stats_df['Spearman_std'], fmt='v', markersize = 10, color='black',
-                ecolor='darkgray', elinewidth=3, capsize=5, capthick=3, label='Average Spearman')
+                ecolor='darkgray', elinewidth=3, capsize=5, capthick=3, alpha = 0.6,label='Average Spearman')
 
     # Draw a line connecting the points for Spearman correlation coefficient
-    ax2.plot(stats_df['# of Features'], stats_df['Spearman'], color='red', linewidth=6)
+    ax2.plot(stats_df['# of Features'], stats_df['Spearman'], color='red', alpha = 0.8,linewidth=6)
 
     # Plot error bars for Pearson correlation coefficient
     ax2.errorbar(stats_df['# of Features'], stats_df['Pearson'], yerr=stats_df['Pearson_std'], fmt='^', markersize = 10, color='black',
-                ecolor='darkgray', elinewidth=3, capsize=5, capthick=3, label='Average Pearson')
+                ecolor='darkgray', elinewidth=3, capsize=5, capthick=3, alpha = 0.6,label='Average Pearson')
 
     # Draw a line connecting the points for Pearson correlation coefficient
-    ax2.plot(stats_df['# of Features'], stats_df['Pearson'], color='green', linewidth=6)
+    ax2.plot(stats_df['# of Features'], stats_df['Pearson'], color='green', alpha = 0.8,linewidth=6)
 
 
     # Set labels for the x-axis and y-axes
-    ax1.set_xlabel('Number of Features', fontsize = 20)
+    ax1.set_xlabel('Number of Remaining Features', fontsize = 20)
     ax1.set_ylabel('Average MAE', fontsize = 20)
     ax2.set_ylabel('Correlation Coefficients', fontsize = 20)
     ax1.set_title("Feature Reduction",weight="bold", fontsize=30)
@@ -374,82 +403,81 @@ def plot_feature_reduction(stats_df, cell_type, model_name, save):
     plt.close()
 
 
-def main(cell_names, model_list, model_save_path, refined_model_save_path, input_param_names, prefix, N_CV = 5 ):
+def main(cell_model_list, model_save_path, refined_model_save_path, input_param_names, keep_PDI, prefix, N_CV = 5 ):
 
-    #Remove PDI from input parameters as it was used as a preprocessing variable.
     input_params = input_param_names.copy()
-    
-    while "PDI" in input_params:
-        input_params.remove("PDI")
-    for cell in cell_names:
-
+    if keep_PDI == False:
+        #Remove PDI from input parameters as it was used as a preprocessing variable.
+        while "PDI" in input_params:
+            input_params.remove("PDI")
+    for cell_model in cell_model_list:
+        cell = cell_model[0]
+        model_name = cell_model[1]
         #Total carbon tails does not change for any datapoints
         if cell in ['ARPE19','N2a']:
             while "Total_Carbon_Tails" in input_params:
                 input_params.remove("Total_Carbon_Tails")
 
+        #Get Training Data for cell
+        with open(model_save_path + f"{model_name}/{cell}/{cell}_Training_Data.pkl", 'rb') as file: # import trained model
+            training_data = pickle.load(file)
+        Train_X = training_data[input_params]
+        Y = training_data[prefix + cell].to_numpy()
+        scaler = MinMaxScaler().fit(Y.reshape(-1,1))
+        temp_Y = scaler.transform(Y.reshape(-1,1))
+        Y = pd.DataFrame(temp_Y, columns = [prefix + cell])
 
-        for model_name in model_list:
-            #Get Training Data for cell
-            with open(model_save_path + f"{model_name}/{cell}/{cell}_Training_Data.pkl", 'rb') as file: # import trained model
-                training_data = pickle.load(file)
-            Train_X = training_data[input_params]
-            Y = training_data[prefix + cell].to_numpy()
-            scaler = MinMaxScaler().fit(Y.reshape(-1,1))
-            temp_Y = scaler.transform(Y.reshape(-1,1))
-            Y = pd.DataFrame(temp_Y, columns = [prefix + cell])
-
-            #Check/create correct save path
-            if os.path.exists(refined_model_save_path + f'/{cell}') == False:
-                os.makedirs(refined_model_save_path + f'/{cell}', 0o666)
+        #Check/create correct save path
+        if os.path.exists(refined_model_save_path + f'/{cell}') == False:
+            os.makedirs(refined_model_save_path + f'/{cell}', 0o666)
 
 
 
-            #Calculate and Plot Feature Correlation
-            dist_link = feature_correlation(Train_X, cell, refined_model_save_path)
+        #Calculate and Plot Feature Correlation
+        dist_link = feature_correlation(Train_X, cell, refined_model_save_path)
 
-            #Open correct model
-            model_path = model_save_path + f'{model_name}/{cell}/{model_name}_{cell}_Trained.pkl'
-            with open(model_path, 'rb') as file: # import trained model
-                trained_model = pickle.load(file)
-            
-            #Test and save models using new Feature clusters 
-            results, best_results, best_model, best_data = eval_feature_reduction(dist_link, Train_X, Y, trained_model, N_CV)
+        #Open correct model
+        model_path = model_save_path + f'{model_name}/{cell}/{model_name}_{cell}_Trained.pkl'
+        with open(model_path, 'rb') as file: # import trained model
+            trained_model = pickle.load(file)
+        
+        #Test and save models using new Feature clusters 
+        results, best_results, best_model, best_data = eval_feature_reduction(dist_link, Train_X, Y, trained_model, N_CV)
 
-            #Plot feature reduction results
-            plot_feature_reduction(results, cell, model_name, refined_model_save_path)
+        #Plot feature reduction results
+        plot_feature_reduction(results, cell, model_name, refined_model_save_path)
 
-            #Save Results into CSV file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Feature_Red_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
-                results.to_csv(f)
+        #Save Results into CSV file
+        with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Feature_Red_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+            results.to_csv(f)
 
-            #Save Best Results into CSV file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
-                best_results.to_csv(f)
+        #Save Best Results into CSV file
+        with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+            best_results.to_csv(f)
 
-            #Save Best Results into pkl file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.pkl', 'wb') as file:
-                pickle.dump(best_results, file)
+        #Save Best Results into pkl file
+        with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.pkl', 'wb') as file:
+            pickle.dump(best_results, file)
 
-            #Save Best training data into CSV file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
-                best_data.to_csv(f)       
+        #Save Best training data into CSV file
+        with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+            best_data.to_csv(f)       
 
-            #Save Best training data into pkl file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.pkl', 'wb') as file:
-                pickle.dump(best_data, file)
+        #Save Best training data into pkl file
+        with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.pkl', 'wb') as file:
+            pickle.dump(best_data, file)
 
-            #Save Y into CSV file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_output.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
-                Y.to_csv(f)       
+        #Save Y into CSV file
+        with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_output.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+            Y.to_csv(f)       
 
-            #Save Best training data into pkl file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_output.pkl', 'wb') as file:
-                pickle.dump(Y, file)
+        #Save Best training data into pkl file
+        with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_output.pkl', 'wb') as file:
+            pickle.dump(Y, file)
 
-            # Save the Model to pickle file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model.pkl', 'wb') as file: 
-                pickle.dump(best_model, file)
+        # Save the Model to pickle file
+        with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model.pkl', 'wb') as file: 
+            pickle.dump(best_model, file)
 
 if __name__ == "__main__":
     main()

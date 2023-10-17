@@ -33,10 +33,10 @@ def get_shap(model, X_train, input_param_names, cell_type, model_name, save_path
 
 
 """**MAIN**"""
-def main(model_list, cell_type_list, model_folder, shap_save_path):
-
-  for model_name in model_list:
-    for c in cell_type_list:
+def main(cell_model_list, model_folder, shap_save_path):
+    for cell_model in cell_model_list:
+      c = cell_model[0]
+      model_name = cell_model[1]
       with open(model_folder + f"{c}/{model_name}_{c}_Best_Model_Results.pkl", 'rb') as file: # import trained model
                 best_results = pickle.load(file)
       input_param_names = best_results.loc['Feature names'][0]
@@ -44,10 +44,7 @@ def main(model_list, cell_type_list, model_folder, shap_save_path):
 
       with open(model_folder + f'/{c}/{model_name}_{c}_Best_Training_Data.pkl', "rb") as file:   # Unpickling
         train_data = pickle.load(file)
-      print(train_data.shape)
-      print(train_data)
       X =  train_data[input_param_names]
-      print(X.shape)
 
 
       print(f'\n################################################################\n\n{c} {model_name}:')

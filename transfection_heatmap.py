@@ -10,16 +10,7 @@ import seaborn as sns
 import os
 
 
-def get_spearman(data, cell1, cell2):
-    if cell1 == cell2:
-        corr = 1
-    else:
-        temp_data = data.loc[:,["RLU_"+cell1, "RLU_"+cell2]]
-        temp_data.dropna(inplace= True)
-        if temp_data.empty:
-            corr = "N/A"
-        corr = spearmanr(temp_data).correlation
-    return corr
+
 
 
 
@@ -49,7 +40,7 @@ def main():
     for cell1 in cell_type_list:
         for cell2 in cell_type_list:
             all_corr.loc[cell1, cell2] = get_spearman(training_data, cell1, cell2)
-
+    fig = plt.subplot()
     sns.heatmap(all_corr, vmin=-0.2, vmax=1, annot = True)
     plt.gca()
     plt.savefig(save_path + 'All_Data_Tfxn_Heatmap.png', dpi=600, format = 'png', transparent=True, bbox_inches='tight')
