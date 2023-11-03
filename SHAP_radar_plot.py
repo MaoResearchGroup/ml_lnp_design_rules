@@ -6,6 +6,7 @@ import pickle
 import pandas as pd
 import seaborn as sns
 import os
+from utilities import get_mean_shap
 
 
 
@@ -68,9 +69,8 @@ def find_bin(value, bins):
             return i
     return -1
 
-
-def plot_Radar(data):
-    data["Norm_Feature_Value"] = data["Norm_Feature_Value"]
+def plot_Radar(data, cell):
+    data["Norm_Feature_Value"] = data[f"{cell}_Norm_Feature_Value"]
     fig = px.line_polar(data, r="Norm_Feature_Value", theta="Feature", line_close=True, start_angle= 0, width=800, height=400)
     fig.update_traces(fill='toself')
     # # Defining the title of the plot
@@ -88,210 +88,184 @@ def plot_Radar(data):
         
     return fig
 
-def plot_Rose(data):
-    data["Norm_Feature_Value"] = data["Norm_Feature_Value"]
+def plot_Rose(data, cell):
+    data["Norm_Feature_Value"] = data[f"{cell}_Norm_Feature_Value"]
     ### pxplot
     fig = px.bar_polar(data, r="Norm_Feature_Value", theta="Feature",
-                        color="Type", width=800, height=400)
+                        width=800, height=400)
+    
+    # fig = px.bar_polar(data, r="Norm_Feature_Value", theta="Feature",
+    #                    color = "Type", width=800, height=400)
     fig.update_layout({
         'plot_bgcolor':'rgba(0, 0, 0, 0)',
         'paper_bgcolor': 'rgba(0, 0, 0, 0)',
         })
-        
-
-    # fig.update_layout(
-    #     showlegend = False,
-    #     polar = dict(
-    #     sector = [0,270],
-    #     ))
-
     return fig
 
 
-def main(model_list, cell_type_list, model_save_path, shap_value_path, figure_save_path, N_bins, comp_features, lipid_features, phys_features):
+def main(cell_model_list, model_folder, shap_value_path, figure_save_path, N_bins, comp_features, lipid_features, phys_features):
     ################ Retreive/Store Data ##############################################
     features = comp_features + lipid_features + phys_features
     ################ INPUT PARAMETERS ############################################
     #cell_type_names = ['HEK293','HepG2', 'N2a', 'ARPE19', 'B16', 'PC3']
 
     N_bins = 10
-    
-    for c in cell_type_list:
-        for model in model_list:
+    for cell_model in cell_model_list:
+        c = cell_model[0]
+        model = cell_model[1]
 
-            #Check save paths          
-            if os.path.exists(figure_save_path + f'/{c}/{model}/') == False:
-                os.makedirs(figure_save_path + f'/{c}/{model}/', 0o666)
+        #Check save paths          
+        if os.path.exists(figure_save_path + f'/{c}/{model}/') == False:
+            os.makedirs(figure_save_path + f'/{c}/{model}/', 0o666)
 
-            #Get feature names used to train model
-            with open(model_save_path + f"{c}/{model}_{c}_Best_Model_Results.pkl", 'rb') as file: # import best model results
-                        best_results = pickle.load(file)
-            input_param_names = best_results.loc['Feature names'][0]  
-  
-            mean_shap = pd.DataFrame(columns = input_param_names)
-            #Get SHAP Values
-            with open(shap_value_path + f"{model}_{c}_SHAP_values.pkl", "rb") as file:   # Unpickling
-                shap_values = pickle.load(file)
+        best_values = get_mean_shap(c = c,
+                            model = model,
+                            model_save_path= model_folder,
+                            shap_value_path=shap_value_path,
+                            N_bins = N_bins)
 
-            #Dataframe of input data to generate SHAP values
-            df_input_data = pd.DataFrame(shap_values.data, columns = input_param_names)
+        # #Get feature names used to train model
+        # with open(model_save_path + f"{c}/{model}_{c}_Best_Model_Results.pkl", 'rb') as file: # import best model results
+        #             best_results = pickle.load(file)
+        # input_param_names = best_results.loc['Feature names'][0]  
 
-            #Dataframe of shap values
-            df_values = pd.DataFrame(shap_values.values, columns = input_param_names)
+        
+        # #Get SHAP Values
+        # with open(shap_value_path + f"{model}_{c}_SHAP_values.pkl", "rb") as file:   # Unpickling
+        #     shap_values = pickle.load(file)
 
-            #dataframe to store average SHAP values
-            mean_storage = pd.DataFrame(columns = ["Feature", "Feature_Value_bin", "Feature_Value", "Avg_SHAP"])
-            
-            #List to store best feature values
-            best_feature_values = []
+        # #Dataframe of input data to generate SHAP values
+        # df_input_data = pd.DataFrame(shap_values.data, columns = input_param_names)
 
-            for f in features:
-                #print(f"****************  {f}  ***********")
-                #Iterate through all feature names to find unique feature values for composition or helper lipid parameters
-                if f in comp_features:
-                    f_type = "comp"
-                elif f in lipid_features:
-                    f_type = "lipid"
-                elif f in phys_features:
-                    f_type = "physio"
-                else:
-                    f_type = "N/A"
-                if f in input_param_names:
-                    combined = pd.DataFrame()
-                    combined['Input'] = df_input_data[f]
-                    combined["SHAP"] = df_values[f]
-                    #check if a physiochemical feature (continous)
-                    if f in phys_features:
-                        #bins
-                        feature_bins = create_bins(int(np.floor(combined['Input'].min())),int(np.ceil(combined['Input'].max())), N_bins)
-                        print(feature_bins)
-                        bin_means = []
-                        for bin in feature_bins:
-                            bin_means.append(np.mean(bin))
+        # #Dataframe of shap values
+        # df_values = pd.DataFrame(shap_values.values, columns = input_param_names)
 
-                        binned_inputs = []
-                        for value in combined['Input']:
-                            bin_index = find_bin(value, feature_bins)
-                            binned_inputs.append(bin_index)
-                        combined['bins'] = binned_inputs
-                        unique_bins = combined['bins'].unique()
-                        #Iterate through unique feature values to get average SHAP for that feature value
-                        for bins in unique_bins:
-                            #Get the mean shap value for the unique feature value
-                            bin_mean = combined.loc[combined['bins'] == bins, 'SHAP'].mean()
-                            #Store the mean shap value with the mean bin value
-                            mean_storage.loc[len(mean_storage)] = [f, feature_bins[bins], np.mean(feature_bins[bins]), bin_mean]
-                        #Create x,y plot of the feature value and 
-                        scatter = plot_scatter_line(f, combined,'Input', "SHAP", mean_storage.loc[mean_storage["Feature"] == f, ["Feature_Value", "Avg_SHAP"]],
-                                                    "Feature_Value", 
-                                                    "Avg_SHAP")
-                        scatter.savefig(figure_save_path + f'/{c}/{model}/{model}_{c}_{f}_scatter.png', bbox_inches = 'tight')
-                        plt.close()
+        # #dataframe to store average SHAP values
+        # mean_storage = pd.DataFrame(columns = ["Feature", "Feature_Value_bin", "Feature_Value", "Avg_SHAP"])
+        
+        # #List to store best feature values
+        # best_feature_values = []
 
+        # for f in features:
+        #     #print(f"****************  {f}  ***********")
+        #     #Iterate through all feature names to find unique feature values for composition or helper lipid parameters
+        #     if f in comp_features:
+        #         f_type = "comp"
+        #     elif f in lipid_features:
+        #         f_type = "lipid"
+        #     elif f in phys_features:
+        #         f_type = "physio"
+        #     else:
+        #         f_type = "N/A"
+        #     if f in input_param_names:
+        #         combined = pd.DataFrame()
+        #         combined['Input'] = df_input_data[f]
+        #         combined["SHAP"] = df_values[f]
+        #         #check if a physiochemical feature (continous)
+        #         if f in phys_features:
+        #             #bins
+        #             feature_bins = create_bins(int(np.floor(combined['Input'].min())),int(np.ceil(combined['Input'].max())), N_bins)
+        #             print(feature_bins)
+        #             bin_means = []
+        #             for bin in feature_bins:
+        #                 bin_means.append(np.mean(bin))
 
-                    #composition or helper lipid features which are more categorical
-                    else:
-                        # #Create x,y plot of the feature value and 
-                        # line = plot_line(combined,'Input',"SHAP")
-                        unique_feature_values = df_input_data[f].unique()
-                        #Iterate through unique feature values to get average SHAP for that feature value
-                        for feature_value in unique_feature_values:
-                            #Get the mean shap value for the unique feature value
-                            feature_mean = df_values.loc[df_input_data[f] == feature_value, f].mean()
-
-                            #Store the mean shap value
-                            mean_storage.loc[len(mean_storage)] = [f, feature_value, feature_value, feature_mean]
-                        
-                        scatter = plot_scatter(f, combined,'Input', "SHAP")
-                        scatter.savefig(figure_save_path + f'/{c}/{model}/{model}_{c}_{f}_scatter.png', bbox_inches = 'tight')
-                        plt.close()
+        #             binned_inputs = []
+        #             for value in combined['Input']:
+        #                 bin_index = find_bin(value, feature_bins)
+        #                 binned_inputs.append(bin_index)
+        #             combined['bins'] = binned_inputs
+        #             unique_bins = combined['bins'].unique()
+        #             #Iterate through unique feature values to get average SHAP for that feature value
+        #             for bins in unique_bins:
+        #                 #Get the mean shap value for the unique feature value
+        #                 bin_mean = combined.loc[combined['bins'] == bins, 'SHAP'].mean()
+        #                 #Store the mean shap value with the mean bin value
+        #                 mean_storage.loc[len(mean_storage)] = [f, feature_bins[bins], np.mean(feature_bins[bins]), bin_mean]
+        #             #Create x,y plot of the feature value and 
+        #             scatter = plot_scatter_line(f, combined,'Input', "SHAP", mean_storage.loc[mean_storage["Feature"] == f, ["Feature_Value", "Avg_SHAP"]],
+        #                                         "Feature_Value", 
+        #                                         "Avg_SHAP")
+        #             scatter.savefig(figure_save_path + f'/{c}/{model}/{model}_{c}_{f}_scatter.png', bbox_inches = 'tight')
+        #             plt.close()
 
 
+        #         #composition or helper lipid features which are more categorical
+        #         else:
+        #             # #Create x,y plot of the feature value and 
+        #             # line = plot_line(combined,'Input',"SHAP")
+        #             unique_feature_values = df_input_data[f].unique()
+        #             #Iterate through unique feature values to get average SHAP for that feature value
+        #             for feature_value in unique_feature_values:
+        #                 #Get the mean shap value for the unique feature value
+        #                 feature_mean = df_values.loc[df_input_data[f] == feature_value, f].mean()
 
-
-                    #Create a histogram of the avg_shap value for each feature value
-                    feature_bar = mean_shap_bar(mean_storage.loc[mean_storage["Feature"] == f, ["Feature_Value", "Avg_SHAP"]],
-                                                "Feature_Value", 
-                                                "Avg_SHAP")
-                    feature_bar.savefig(figure_save_path + f'/{c}/{model}/{model}_{c}_{f}_bar.png', bbox_inches = 'tight')
-                    plt.close()
-                    #Find the feature value with the max average shap value and save normalized fraction
-                    best_feature_value = mean_storage['Feature_Value'][mean_storage.loc[mean_storage['Feature'] == f, "Avg_SHAP"].astype(float).idxmax()]
-                    min = mean_storage.loc[mean_storage['Feature'] == f, 'Feature_Value'].min()
-                    max = mean_storage.loc[mean_storage['Feature'] == f, 'Feature_Value'].max()
-                    normalized_value = (best_feature_value - min)/(max-min)
-                    best_feature_values.append((f,f_type, normalized_value))
-
-                  
-                # If feature is not in list, then populate feature value with "NA"
-                else:
-                     mean_storage.loc[len(mean_storage)] = [f, float("NaN"),float("NaN"), float("NaN")]
-                     best_feature_values.append((f,f_type,float("NaN")))
-                     print(f"{f} is not in input parameters")
+        #                 #Store the mean shap value
+        #                 mean_storage.loc[len(mean_storage)] = [f, feature_value, feature_value, feature_mean]
                     
-            #print(mean_storage)
-            #print(best_feature_values)
-            df_best_feature_values = pd.DataFrame(best_feature_values, columns = ["Feature", "Type","Norm_Feature_Value"])
-            #print(df_best_feature_values)
+        #             scatter = plot_scatter(f, combined,'Input', "SHAP")
+        #             scatter.savefig(figure_save_path + f'/{c}/{model}/{model}_{c}_{f}_scatter.png', bbox_inches = 'tight')
+        #             plt.close()
+
+
+
+
+        #         #Create a histogram of the avg_shap value for each feature value
+        #         feature_bar = mean_shap_bar(mean_storage.loc[mean_storage["Feature"] == f, ["Feature_Value", "Avg_SHAP"]],
+        #                                     "Feature_Value", 
+        #                                     "Avg_SHAP")
+        #         feature_bar.savefig(figure_save_path + f'/{c}/{model}/{model}_{c}_{f}_bar.png', bbox_inches = 'tight')
+        #         plt.close()
+        #         #Find the feature value with the max average shap value and save normalized fraction
+        #         best_feature_value = mean_storage['Feature_Value'][mean_storage.loc[mean_storage['Feature'] == f, "Avg_SHAP"].astype(float).idxmax()]
+        #         min = mean_storage.loc[mean_storage['Feature'] == f, 'Feature_Value'].min()
+        #         max = mean_storage.loc[mean_storage['Feature'] == f, 'Feature_Value'].max()
+        #         normalized_value = (best_feature_value - min)/(max-min)
+        #         best_feature_values.append((f,f_type, normalized_value))
 
                 
+        #     # If feature is not in list, then populate feature value with "NA"
+        #     else:
+        #          mean_storage.loc[len(mean_storage)] = [f, float("NaN"),float("NaN"), float("NaN")]
+        #          best_feature_values.append((f,f_type,float("NaN")))
+        #          print(f"{f} is not in input parameters")
+                
+        # #print(mean_storage)
+        # #print(best_feature_values)
+        # df_best_feature_values = pd.DataFrame(best_feature_values, columns = ["Feature", "Type","Norm_Feature_Value"])
+        # #print(df_best_feature_values)
 
-            #Save average shap of the features as csv
-            with open(figure_save_path + f"/{c}/{model}/{model}_{c}_mean_shap.csv", 'w', encoding = 'utf-8-sig') as f:
-                mean_storage.to_csv(f)
+            
 
-            #Create radar plot of the feature value with highest average shap for each feature
-            radar_plot = plot_Radar(df_best_feature_values)
-            radar_plot.write_image(figure_save_path + f'{model}_{c}_comp_radar.svg')
-            plt.close()   
-            # #for type in ("comp", "lipid", "physio")
-            # print(df_best_feature_values)
-            # rose_plot = plot_Rose(df_best_feature_values)
-            # rose_plot.write_image(figure_save_path + f'{model}_{c}_comp_rose.svg')
+        # #Save average shap of the features as csv
+        # with open(figure_save_path + f"/{c}/{model}/{model}_{c}_mean_shap.csv", 'w', encoding = 'utf-8-sig') as f:
+        #     mean_storage.to_csv(f)
 
-            # #Create radar plot of the feature value with highest average shap for each feature
-            # radar_plot = plot_Radar(lipid_features, best_feature_values, comp_features, lipid_features, phys_features)
-            # radar_plot.savefig(save_path + f'{model}_{c}_lipid_radar.png', bbox_inches = 'tight')
-            # plt.close()           
+        #Create radar plot of the feature value with highest average shap for each feature
+        print(best_values)
+        radar_plot = plot_Radar(best_values, c)
+        radar_plot.write_image(figure_save_path + f'{model}_{c}_RADAR.svg')
+        plt.close()   
+        #for type in ("comp", "lipid", "physio")
+        rose_plot = plot_Rose(best_values, c)
+        rose_plot.write_image(figure_save_path + f'{model}_{c}_ROSE.svg')
 
-                #df_values.loc[df_input_data[f] == ]
-            #Get the mean SHAP value for
-            # values = shap_values.values
-            # print(input_data)
+        # #Create radar plot of the feature value with highest average shap for each feature
+        # radar_plot = plot_Radar(lipid_features, best_values, c, comp_features, lipid_features, phys_features)
+        # radar_plot.savefig(save_path + f'{model}_{c}_lipid_radar.png', bbox_inches = 'tight')
+        # plt.close()           
 
-
-
-
-            # with open(model_folder + f'/{c}/{model}_{c}_Best_Training_Data.pkl', "rb") as file:   # Unpickling
-            #     train_data = pickle.load(file)
-            # X =  train_data[features]
+            #df_values.loc[df_input_data[f] == ]
+        #Get the mean SHAP value for
+        # values = shap_values.values
+        # print(input_data)
 
 
 
 
-
-
-
-
-    # cell_type_names = ['HEK293','HepG2', 'N2a', 'ARPE19', 'B16', 'PC3', 'overall']
-    # for cell in cell_type_names:
-    #     if cell == "B16":
-    #         values = [1, 6, 1, 10, 7]
-    #     elif cell =="HEK293":
-    #         values = [1, 7, 10, 3, 10]
-    #     elif cell == "N2a":
-    #         values = [1, 1, 3, 3, 7]
-    #     elif cell == "HepG2":
-    #         values = [1, 10, 10, 3, 10]
-    #     elif cell == "ARPE19":
-    #         values = [1, 7, 10, 3, 10]
-    #     elif cell == "PC3":
-    #         values = [1, 1, 10, 3, 10]
-    #     elif cell =="overall":
-    #         values = [1, 7, 10, 3, 7]
-    #     else:
-    #         values = [0, 0, 0, 0, 0]
-    #     plot_Radar(cell, features, values, save_path)
+        # with open(model_folder + f'/{c}/{model}_{c}_Best_Training_Data.pkl', "rb") as file:   # Unpickling
+        #     train_data = pickle.load(file)
+        # X =  train_data[features]
 
 
 if __name__ == "__main__":

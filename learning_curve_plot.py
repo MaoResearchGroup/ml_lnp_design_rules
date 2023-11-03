@@ -43,7 +43,7 @@ def main(cell_model_list, data_file_path, save_path, model_folder,input_param_na
         for i in range(NUM_ITER):
             cross_val = KFold(n_splits= num_splits, random_state= i+10, shuffle=True)
             train_sizes, train_scores, validation_scores = learning_curve(estimator = model, X = X, y = np.ravel(Y), cv = cross_val, train_sizes= train_size,
-                                                                        scoring = 'neg_mean_absolute_error', n_jobs= -1)
+                                                                        scoring = 'neg_mean_absolute_error', shuffle= True, n_jobs= -1)
 
             train_scores_mean[i] = -train_scores.mean(axis = 1)
             validation_scores_mean[i] = -validation_scores.mean(axis = 1)

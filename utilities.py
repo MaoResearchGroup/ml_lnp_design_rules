@@ -44,10 +44,14 @@ def extract_training_data(data_file_path, input_param_names, cell_type, size_cut
     return X,Y, cell_data
 
 
-def select_input_params(size, zeta):
+def select_input_params(size, zeta, ratio = True):
     #Input parameters
-    formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
-                    'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'] 
+    if ratio:
+        formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
+                        'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'] 
+    else:
+        formulation_param_names = ['wt_Helper', 'wt_Dlin',
+                        'wt_Chol', 'wt_DMG', 'wt_pDNA'] 
     
     lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
     
@@ -219,15 +223,15 @@ def extraction_all(name, cell, model_path, N_CV):
 def get_best_model_cell(figure_save_path, model_folder, cell_type_list):
     df = pd.DataFrame(columns = ['Cell_Type', 'Model', 'Test Score'])
     for cell in cell_type_list:
-        #data = pd.read_csv(figure_save_path + f"{cell}_Boxplot_dataset.csv")
-        data = pd.read_csv(figure_save_path + f"{cell}_Figure_1_dataset.csv")
+        data = pd.read_csv(figure_save_path + f"{cell}_Boxplot_dataset.csv")
+        #data = pd.read_csv(figure_save_path + f"{cell}_Figure_1_dataset.csv")
         data.drop(columns=data.columns[0], axis=1,  inplace=True)
         MAE = data.mean(axis = 0)
         df.loc[len(df)] = [cell, MAE.index[0], MAE[0]]
     df.sort_values(by = 'Test Score', inplace = True)
     with open(model_folder + "Best_Model_Cell.csv", 'w', encoding = 'utf-8-sig') as f:
-        df.to_csv(f)
-    print('Saved Results')
+        df.to_csv(f, index=False)
+    print('Saved Best_Model_Cell')
     return df
         #best_model_for_cell.append([])
 

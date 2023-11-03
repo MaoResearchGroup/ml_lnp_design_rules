@@ -1,0 +1,11 @@
+﻿,0
+# of Features,8
+Feature names,"['P_charged_centers', 'cLogP', 'Hbond_D', 'Double_bonds', 'wt_Helper', 'wt_Chol', 'wt_DMG', 'wt_pDNA']"
+Removed Feature Names,"['Hbond_A', 'Total_Carbon_Tails', 'PDI', 'Zeta', 'Size', 'wt_Dlin', 'N_charged_centers']"
+MAE,0.06848
+MAE_std,0.04126943070732288
+Spearman,0.738445670187342
+Spearman_std,0.04126943070732288
+Pearson,0.85124949988542
+Pearson_std,0.026099647479884316
+linkage distance,26.6

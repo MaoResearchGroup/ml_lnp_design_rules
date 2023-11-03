@@ -209,7 +209,14 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
 
     pear_list.append(np.mean(pearson_results)) # append average MAE value to empty list
     pear_std_list.append(np.std(pearson_results)) # append average MAE value to empty list
-    print(f'\n INITAL MAE IS {best_MAE}')
+    print(f'\n INITIAL MAE IS {best_MAE}')
+
+    best_results = [len(initial_feature_list), initial_feature_list, 
+                            removed_feature_list, 
+                            best_MAE, np.std(spearman_results),
+                            np.mean(spearman_results), np.std(spearman_results),
+                            np.mean(pearson_results), np.std(pearson_results),
+                            n/N_features]
 
     #Remove the first feature from the ordered feature removal list from all features
     iteration = 0
@@ -227,9 +234,10 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
         acc_results, spearman_results, pearson_results, new_model = evaluate_model(X_features, Y, selected_features, model, N_CV)
 
         
+        
         # If the performance is equal or worse than previous than update parameters else keep the feature
         if round(np.mean(acc_results),3) <= round(best_MAE,3):
-            print(f'\n\n {feature} WAS REMOVED AND BEST RESULTS UPDATED\n\n') 
+            print(f'\n\n{feature} WAS REMOVED AND BEST RESULTS UPDATED\n\n') 
 
             feature_number_list.append(len(tested_features)) # append the number of input features to empty list
             feature_name_list.append(tested_features) # append the list of feature names to an empty list of lists
@@ -274,7 +282,9 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
         print('Currently removed features', best_results[2])
                 
         print("\n################################################################\n ")
-    
+
+    print('\nFINAL RETAINED FEATURES', best_results[1])
+    print('\nFINAL REMOVED FEATURES', best_results[2])
     # create a list of tuples with results model refinement
     list_of_tuples = list(zip(feature_number_list, feature_name_list, removed_feature_list, 
                               MAE_list, MAE_std_list, 
@@ -296,6 +306,8 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
                                                          'Spearman', 'Spearman_std', 
                                                          'Pearson', 'Pearson_std',
                                                          'linkage distance']) 
+
+
     return results_df, best_df, best_model, best_training_data
 
 

@@ -13,14 +13,14 @@ import utilities
 import SHAP_clustering
 import bump_plot
 import time
+import os
 
 def main():
   ################ What parts of the pipeline to run ###############
   plot_f_distribution   = False
-  run_model_selection   = True
-  plot_model_selection  = False
-  select_best_models    = True
-  run_learning_curve    = True
+  run_model_selection   = False
+  plot_model_selection  = True
+  run_learning_curve    = False
   run_feature_reduction = False
   run_SHAP_explain      = False
   run_SHAP_plots        = False
@@ -34,13 +34,16 @@ def main():
 
   model_list = ['RF', 'MLR', 'lasso', 'PLS', 'kNN', 'LGBM', 'XGB', 'DT']#Did not include SVR 
   cell_type_list = ['HepG2','HEK293','B16', 'PC3', 'N2a', 'ARPE19']
+  #cell_type_list = ['HepG2']
+  #List helper lipids
 
   # #Testing
   # best_cell_model = [('HepG2', 'RF')]
   # model_list = ['LGBM']#Did not include SVR 
   # cell_type_list = ['HepG2']
 
-  RLU_floor = 3
+  ratiometric = True
+  RLU_floor = 2
   size = True
   zeta = True
   keep_PDI = True
@@ -48,16 +51,17 @@ def main():
   PDI_cutoff = 1 #Use 1 to include all data
   N_CV = 5
   prefix = "RLU_" #WARNING: HARDCODED
-  input_param_names = utilities.select_input_params(size, zeta)
+  input_param_names = utilities.select_input_params(size, zeta, ratio = ratiometric)
   print(f"INITIAL INPUT PARAMS: {input_param_names}")
   ################ SAVING, LOADING##########################
+  #RUN_NAME                  = f"Runs/wt_HepG2_All_Size_PDI{PDI_cutoff}_keep_Zeta_RLU{RLU_floor}"
+
   RUN_NAME                  = f"Runs/Models_Final_All_Size_PDI{PDI_cutoff}_keep_Zeta_RLU{RLU_floor}"
-  
+
   data_file_path            = 'Raw_Data/Final_Master_Formulas.csv' #Where to extract training data
-  model_save_path           = f"{RUN_NAME}/Trained_Models/" # Where to save model, results, and training data
+  model_save_path           = f"{RUN_NAME}/Trained_Models/" # Where to save model, results, and training data 
   refined_model_save_path   = f"{RUN_NAME}/Feature_Reduction/" #where to save refined model and results
   shap_value_save_path      = f'{RUN_NAME}/SHAP_Values/'
-
   figure_save_path          = f"{RUN_NAME}/Figures/" #where to save figures
   features_save_path        = f"{figure_save_path}Features/"
   model_selection_save_path = f"{figure_save_path}Model_Selection/"
@@ -71,8 +75,6 @@ def main():
 
 
   ##################### Screen and Optimize Model #####################################
-
-
 
   #Model Optimization and Selection
   if plot_f_distribution:
@@ -89,9 +91,13 @@ def main():
 
   if run_model_selection:
     print('\n###########################\n\n MODEL SELECTION AND OPTIMIZATION')
-    #Timing
+    #Timing (Estimated 2-3hrs)
     start_time = time.time()
     for cell in cell_type_list:
+
+      #Helper lipids (Extract the training data for the cell type.
+      # Loop through the unique helper lipids within that dataset
+
       for model_name in model_list:
         print("#"*10 + f"  TRAINING:{model_name} for {cell}  " + "#"*10 )
         run_NESTED_CV.run_NESTED_CV(model_name = model_name,
@@ -108,8 +114,6 @@ def main():
     print("\n\n--- %s minutes for MODEL SELECTION---" % ((time.time() - start_time)/60))
 
 
-
-
   #Plotting Model Selection
   if plot_model_selection:
     print('\n###########################\n\n MODEL SELECTION PLOTTING')
@@ -120,15 +124,17 @@ def main():
                                 N_CV=N_CV)
   
   #Extract best models and cell types
-  if select_best_models: 
-    
+  print('\n###########################\n\n SELECTING BEST MODELS')
+
+  #Check whether selection has been made before
+  if os.path.exists(model_save_path + "Best_Model_Cell.csv"):
+    cell_model = pd.read_csv(model_save_path + "Best_Model_Cell.csv")
+  else:
     cell_model = utilities.get_best_model_cell(model_selection_save_path, 
                                               model_folder=model_save_path,
-                                              cell_type_list=cell_type_list)
-
-    cell_model.drop(cell_model.columns[2], axis=1, inplace = True)
-    best_cell_model = list(cell_model.itertuples(index=False, name=None))
-    print(best_cell_model)
+                                              cell_type_list=cell_type_list)      
+  best_cell_model = list(cell_model.drop(cell_model.columns[2], axis=1).itertuples(index=False, name=None))
+  print("Best models/cell pairs:",best_cell_model)
 
   ##################### Learning Curve #####################################
   if run_learning_curve:
@@ -150,7 +156,7 @@ def main():
   #################### Feature Reduction #####################################
   if run_feature_reduction:
     print('\n###########################\n\n RUNNING FEATURE REDUCTION')
-      #Timing
+    #Timing (Estimated 4-8hrs)
     start_time = time.time()
     Feature_reduction.main(cell_model_list=best_cell_model,
                             model_save_path= model_save_path,
@@ -184,9 +190,8 @@ def main():
                          figure_save_path=shap_cluster_save_path)
   if plot_Rose:
     print('\n###########################\n\n PLOTTING ROSE PLOT')
-    SHAP_radar_plot.main(model_list=best_model_list, 
-                         cell_type_list=cell_type_list, 
-                         model_save_path=refined_model_save_path, 
+    SHAP_radar_plot.main(cell_model_list=best_cell_model, 
+                         model_folder=refined_model_save_path, 
                          shap_value_path=shap_value_save_path, 
                          figure_save_path=radar_plot_save_path, 
                          N_bins = 10, 

@@ -40,7 +40,7 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
         if os.path.exists(save_path) == False:
             os.makedirs(save_path, 0o666)
 
-        df9.to_csv(save_path + f"{cell}_Boxplot_dataset.csv")
+        df9.to_csv(save_path + f"{cell}_Boxplot_dataset.csv", index = False)
         df9.describe()
         utilities.run_tukey(df9, save_path, cell)
 
@@ -115,7 +115,6 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
 def plot_predictions(tuple_list, pred_transfection, exp_transfection, pearson_results, spearman_results, save_folder):
     ######### Hold Out Validation Pred vs Exp. Plots ########
     for best in tuple_list:
-        print(best)
         #Define model and cell
         cell = best[0]
         model_name = best[1]
@@ -123,9 +122,6 @@ def plot_predictions(tuple_list, pred_transfection, exp_transfection, pearson_re
         fig = plt.figure(figsize=(3,3))
         predicted = pred_transfection.at[model_name, cell]
         experimental = exp_transfection.at[model_name, cell]
-
-        print(predicted)
-        print(experimental)
 
         sns.set_theme(font='Arial', font_scale= 2)
         reg = sns.regplot(x = experimental, y = predicted, color = "k")
@@ -156,6 +152,48 @@ def plot_predictions(tuple_list, pred_transfection, exp_transfection, pearson_re
         plt.savefig(save_folder + f'/{model_name}_{cell}_predictions.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
         plt.close()
 
+def plot_cell_comparision(tuple_list, save_folder):
+    #extract data
+    best_AE = pd.DataFrame()
+    for best in tuple_list:
+        cell = best[0]
+        data = pd.read_csv(save_folder + f"{cell}_Boxplot_dataset.csv")
+        best_AE[cell] = data[data.columns[0]] #Extract first column of dataset
+    
+    #convert data to percent error
+    best_AE = best_AE*100
+    best_MAE = best_AE.mean(axis=0)
+    #Plot
+    fig = plt.figure(figsize=(3,3))
+    sns.set_theme(font='Arial', font_scale= 2)
+    palette = sns.color_palette("hls", 8, as_cmap=False)
+    # sns.barplot(best_MAE)
+
+    ##### VIOLIN PLOT
+    bar = sns.barplot(data = best_AE, errorbar = 'sd', palette=palette)
+    plt.ylabel('Average Percent Error', font = "Arial", fontsize=10)
+    bar.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
+    bar.set(ylim=(-5, 25), yticks=np.arange(-5,30,5))
+    # add tick marks on x-axis or y-axis
+    bar.tick_params(bottom=True, left=True)
+    # x-axis and y-axis label color
+    bar.axes.yaxis.label.set_color('black')
+    bar.axes.xaxis.label.set_color('black')
+    bar.set_title("Cell to Cell Comparision",weight="bold", fontsize=12)
+
+    bar.set_yticklabels(bar.get_yticklabels(), size = 8)
+    bar.set_xticklabels(bar.get_xticklabels(), size = 8, rotation = 45)
+    # plt.tick_params(axis='both', which='major', labelsize=10)
+
+    bar.spines['left'].set_color('black')
+    bar.spines['bottom'].set_color('black')        # x-axis and y-axis tick color
+    x_min, x_max = bar.get_xlim()
+    #plot dotted line at o
+    plt.plot([x_min, x_max], [0,0], '--r')
+
+    plt.savefig(save_folder + f'/Cell_to_Cell_Comparision.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
+    plt.close()
+
 def main(model_folder, figure_save_path, cell_type_list, model_list, N_CV):
 
     save_folder = figure_save_path
@@ -176,71 +214,29 @@ def main(model_folder, figure_save_path, cell_type_list, model_list, N_CV):
                 results.insert(0, 'Model', model) #Add model
                 results.insert(1, 'Cell_Type', cell) #Add cell type
                 all_results = pd.concat([results, all_results.loc[:]], ignore_index = True).reset_index(drop = True)
-
+    
     #Save results
     if os.path.exists(model_folder) == False:
        os.makedirs(model_folder, 0o666)
     with open(model_folder + "Model_Selection_Results.csv", 'w', encoding = 'utf-8-sig') as f:
         all_results.to_csv(f)
-    print('Saved Results')
+    print('Saved Model Selection Results')
     
-    # #Find best model for each cell type
-    # best_model_for_cell = pd.DataFrame(columns = ['Cell_Type', 'Model', 'Test Score'])
-    # for cell in cell_type_list:
-    #     cell_df = all_results.loc[all_results['Cell_Type']==cell, :]
-    #     cell_df.sort_values(by = ['Test Score', 'Score_difference'], inplace = True)
-    #     new_df = cell_df.reindex(columns = ['Cell_Type','Model', 'Test Score'])
-    #     best_model_for_cell = best_model_for_cell.append(new_df.iloc[0])
-
-    # best_model_for_cell.sort_values(by = 'Test Score', inplace = True)
-
-    #### PLOT MODEL SELECTION RESULTS ###########
-    if os.path.exists(save_folder) == False:
-       os.makedirs(save_folder, 0o666)
-
-
-    # ##### Model Selection Box Plot ##############
-    # plot_AE_Box(cell_type_list, model_folder, save_folder, N_CV)
-
-    #Get cell and model tuples
-    cell_model = utilities.get_best_model_cell(figure_save_path = figure_save_path, 
-                                              model_folder=model_folder,
-                                              cell_type_list=cell_type_list)
-    print(cell_model.columns[0])
-    cell_model.drop(cell_model.columns[2], axis=1, inplace = True)
-    with open(model_folder + "Best_Model_Cell.csv", 'w', encoding = 'utf-8-sig') as f:
-        cell_model.to_csv(f)
-        
-    best_cell_model = list(cell_model.itertuples(index=False, name=None))
-
-    # ALL_PRED = pd.DataFrame()
-    # for pair in best_cell_model:
-    #     cell = pair[0]
-    #     model = pair[0]
-    #     best_results = extraction_all(model, cell, model_folder, N_CV)
-    #     ALL_PRED[]
-    # print('Saved Results')
-
-    ########## Extract Results ##################
+    ########## Extract Results for all models for all cell types##################
     MAE_results = pd.DataFrame(index = model_list, columns = cell_type_list)
     spearman_results = pd.DataFrame(index = model_list, columns = cell_type_list)
     pearson_results = pd.DataFrame(index = model_list, columns = cell_type_list)
     pred_transfection = pd.DataFrame(index = model_list, columns = cell_type_list)
     exp_transfection = pd.DataFrame(index = model_list, columns = cell_type_list)
-    # for model in model_list:
-    #     for cell in cell_type_list:
-    print(all_results.columns)
-    print(all_results.index)
-    for tuple in best_cell_model:
-        m1 = all_results["Model"] == tuple[1]
-        m2 = all_results["Cell_Type"] == tuple[0]
-        MAE_results.at[model, cell] = all_results[m1&m2]['Test Score'].values[0]
-        spearman_results.at[model, cell] = all_results[m1&m2]['Spearmans Rank'].values[0][0]
-        pearson_results.at[model, cell] = all_results[m1&m2]['Pearsons Correlation'].values[0][0]
-        pred_transfection.at[model, cell] = all_results[m1&m2]['Predicted_Transfection'].values[0]
-        exp_transfection.at[model, cell] = all_results[m1&m2]['Experimental_Transfection'].values[0].transpose()[0] #Format as list
-
-    print(MAE_results)
+    for model in model_list:
+        for cell in cell_type_list:
+            m1 = all_results["Model"] == model
+            m2 = all_results["Cell_Type"] == cell
+            MAE_results.at[model, cell] = all_results[m1&m2]['Test Score'].values[0]
+            spearman_results.at[model, cell] = all_results[m1&m2]['Spearmans Rank'].values[0][0]
+            pearson_results.at[model, cell] = all_results[m1&m2]['Pearsons Correlation'].values[0][0]
+            pred_transfection.at[model, cell] = all_results[m1&m2]['Predicted_Transfection'].values[0]
+            exp_transfection.at[model, cell] = all_results[m1&m2]['Experimental_Transfection'].values[0].transpose()[0] #Format as list
     
     ########## Tabulate Results ##################
     with open(model_folder + "Model_Selection_MAE.csv", 'w', encoding = 'utf-8-sig') as f:
@@ -250,13 +246,34 @@ def main(model_folder, figure_save_path, cell_type_list, model_list, N_CV):
     with open(model_folder + "Model_Selection_pearson.csv", 'w', encoding = 'utf-8-sig') as f:
         pearson_results.to_csv(f)   
     
-    #### Pred vs experimental plots
+
+    #### PLOT MODEL SELECTION RESULTS ###########
+    if os.path.exists(save_folder) == False:
+       os.makedirs(save_folder, 0o666)
+
+    ###### Model Selection Box Plot ##############
+    plot_AE_Box(cell_type_list, model_folder, save_folder, N_CV)
+    
+    ###### Select best cell/model pairs ##########
+    cell_model = utilities.get_best_model_cell(figure_save_path = save_folder, 
+                                              model_folder=model_folder,
+                                              cell_type_list=cell_type_list)
+    best_cell_model = list(cell_model.itertuples(index=False, name=None))
+
+
+    ###### Hold-out set predictions plot ##############
     plot_predictions(tuple_list = best_cell_model,
                      pred_transfection=pred_transfection,
                      exp_transfection=exp_transfection,
                      pearson_results=pearson_results,
                      spearman_results=spearman_results,
                      save_folder=save_folder)
+    
+
+    ###### Cell-wise comparision plots ##############
+    plot_cell_comparision(best_cell_model, save_folder=save_folder)
+    
+
 
 
 if __name__ == "__main__":

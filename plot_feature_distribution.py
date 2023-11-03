@@ -9,7 +9,6 @@ from sklearn.preprocessing import MinMaxScaler
 from collections import defaultdict
 from utilities import extract_training_data, get_spearman
 import plotly.figure_factory as ff
-from Nested_CV_reformat import NESTED_CV_reformat
 
 from sklearn.decomposition import PCA
 from PIL import Image
