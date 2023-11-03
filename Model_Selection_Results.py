@@ -164,14 +164,14 @@ def plot_cell_comparision(tuple_list, save_folder):
     best_AE = best_AE*100
     best_MAE = best_AE.mean(axis=0)
     #Plot
-    fig = plt.figure(figsize=(3,3))
+    fig = plt.figure(figsize=(2.5,1))
     sns.set_theme(font='Arial', font_scale= 2)
     palette = sns.color_palette("hls", 8, as_cmap=False)
     # sns.barplot(best_MAE)
 
     ##### VIOLIN PLOT
     bar = sns.barplot(data = best_AE, errorbar = 'sd', palette=palette)
-    plt.ylabel('Average Percent Error', font = "Arial", fontsize=10)
+    plt.ylabel('Percent Error', font = "Arial", fontsize=10)
     bar.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
     bar.set(ylim=(-5, 25), yticks=np.arange(-5,30,5))
     # add tick marks on x-axis or y-axis

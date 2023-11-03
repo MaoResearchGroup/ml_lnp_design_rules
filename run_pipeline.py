@@ -19,9 +19,9 @@ def main():
   ################ What parts of the pipeline to run ###############
   plot_f_distribution   = False
   run_model_selection   = False
-  plot_model_selection  = True
+  plot_model_selection  = False
   run_learning_curve    = False
-  run_feature_reduction = False
+  run_feature_reduction = True
   run_SHAP_explain      = False
   run_SHAP_plots        = False
   plot_SHAP_cluster     = False
@@ -164,7 +164,8 @@ def main():
                             input_param_names=input_param_names, 
                             keep_PDI=keep_PDI,
                             prefix=prefix, 
-                            N_CV = N_CV)
+                            N_CV = N_CV,
+                            plot_only= True)
     print("\n\n--- %s minutes for feature reduction---" % ((time.time() - start_time)/60))
   #################### SHAP Analysis #####################################
   if run_SHAP_explain:
