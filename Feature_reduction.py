@@ -395,7 +395,7 @@ def plot_feature_reduction(stats_df, cell_type, model_name, save):
     plt.rcParams['font.size'] = 10
 
     # Set labels for the x-axis and y-axes
-    label_size = 10
+    label_size = 12
 
     ax1.set_xlabel('Number of Remaining Features', fontsize = label_size)
     ax1.set_ylabel('Percent Error', fontsize = label_size)

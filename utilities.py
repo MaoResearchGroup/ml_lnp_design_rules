@@ -224,8 +224,6 @@ def get_best_model_cell(figure_save_path, model_folder, cell_type_list):
     df = pd.DataFrame(columns = ['Cell_Type', 'Model', 'Test Score'])
     for cell in cell_type_list:
         data = pd.read_csv(figure_save_path + f"{cell}_Boxplot_dataset.csv")
-        #data = pd.read_csv(figure_save_path + f"{cell}_Figure_1_dataset.csv")
-        data.drop(columns=data.columns[0], axis=1,  inplace=True)
         MAE = data.mean(axis = 0)
         df.loc[len(df)] = [cell, MAE.index[0], MAE[0]]
     df.sort_values(by = 'Test Score', inplace = True)

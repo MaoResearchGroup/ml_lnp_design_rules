@@ -35,14 +35,17 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
         #ALL_AE['NGB'] = ALL_NGB['Absolute_Error']
         #ALL_AE['NN'] = ALL_NN['Absolute_Error']
         sorted_index = ALL_AE.mean().sort_values().index
-        df9=ALL_AE[sorted_index]
+        df=ALL_AE[sorted_index]
 
         if os.path.exists(save_path) == False:
             os.makedirs(save_path, 0o666)
 
-        df9.to_csv(save_path + f"{cell}_Boxplot_dataset.csv", index = False)
-        df9.describe()
-        utilities.run_tukey(df9, save_path, cell)
+        df.to_csv(save_path + f"{cell}_Boxplot_dataset.csv", index = False)
+
+        utilities.run_tukey(df, save_path, cell)
+
+        #convert MAE to percent error
+        error_df = df*100
 
         ############## PLOTTING
         # figure set-up - size
@@ -60,7 +63,7 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
 
         # boxplot set up and box-whis style
         boxplot = sns.boxplot(palette=palette, 
-                            data=df9, saturation = 0.8,
+                            data=error_df, saturation = 0.8,
                             boxprops = dict(linewidth=1.0, edgecolor='black', alpha = 0.8),
                             whiskerprops = dict(linewidth=1.0, color='black'),
                             capprops = dict(linewidth=1.0, color='black'),
@@ -72,18 +75,17 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
                                             markeredgecolor="black", markersize=6, linewidth=0.05, zorder=10))
 
         # include each datapoint
-        boxplot = sns.stripplot(data=df9, marker="o", edgecolor='white', 
-                                alpha=0.5, size=6, linewidth=0.3, color='black', jitter = True, zorder=0)
+        boxplot = sns.stripplot(data=error_df, marker="o", edgecolor='white', 
+                                alpha=0.5, size=6, linewidth=0.3, palette='dark:black', jitter = True, zorder=0)
 
         # Title
-        boxplot.axes.set_title("Model Performance Ranked by MAE", font = "Arial",fontsize=20, color="Black", weight="bold")
+        boxplot.axes.set_title("Model Performance Ranked by Percent Error", font = "Arial",fontsize=20, color="Black", weight="bold")
 
         # Title - x-axis/y-axis
         #boxplot.set_xlabel("Model index", fontsize=12)
-        boxplot.set_ylabel("Absolute error (AE)", font = "Arial", fontsize=16, color='black', 
-                        weight="bold")
+        boxplot.set_ylabel("Percent Error", font = "Arial", fontsize=16, color='black')
         
-        boxplot.set(ylim=(-0.02, 1), yticks=np.linspace(0,1,6))
+        boxplot.set(ylim=(-2, 1), yticks=np.arange(0,120,20))
 
         # x-axis rotation and text color
         boxplot.set_xticklabels(boxplot.get_xticklabels(),rotation = 0, color='black', fontsize=14)
@@ -119,28 +121,28 @@ def plot_predictions(tuple_list, pred_transfection, exp_transfection, pearson_re
         cell = best[0]
         model_name = best[1]
 
-        fig = plt.figure(figsize=(3,3))
+        fig = plt.figure(figsize=(2.5,2.5))
         predicted = pred_transfection.at[model_name, cell]
         experimental = exp_transfection.at[model_name, cell]
 
         sns.set_theme(font='Arial', font_scale= 2)
+        plt.rcParams['font.size'] = 12
         reg = sns.regplot(x = experimental, y = predicted, color = "k")
-        #plt.plot([0, 1], [0, 1], linestyle = 'dotted', color = 'r') #Ideal line
-        plt.annotate('Pearsons r = {:.2f}'.format(pearson_results.at[model_name, cell]), xy=(0.2, 0.9), xycoords='axes fraction', fontsize=12)
-        plt.annotate('Spearmans r = {:.2f}'.format(spearman_results.at[model_name, cell]), xy=(0.2, 0.8), xycoords='axes fraction', fontsize=12)
-        plt.ylabel('Normalized Predicted RLU', font = "Arial", fontsize=10)
-        plt.xlabel('Normalized Experimental RLU', font = "Arial", fontsize=10)
-        reg.set(xlim=(-0.02, 1.02), xticks=np.linspace(0,1,5), ylim=(-0.02, 1.02), yticks=np.linspace(0,1,5))
+        plt.annotate('Pearsons r = {:.2f}'.format(pearson_results.at[model_name, cell]), xy=(0.1, 0.9), xycoords='axes fraction')
+        plt.annotate('Spearmans r = {:.2f}'.format(spearman_results.at[model_name, cell]), xy=(0.1, 0.8), xycoords='axes fraction')
+        plt.ylabel('Predicted Transfection', fontsize = 12)
+        plt.xlabel('Experimental Transfection',fontsize = 12)
+        reg.set(xlim=(0, 1.05), xticks=np.linspace(0,1,5), ylim=(0, 1.05), yticks=np.linspace(0,1,5))
         reg.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
         # add tick marks on x-axis or y-axis
         reg.tick_params(bottom=True, left=True)
         # x-axis and y-axis label color
         reg.axes.yaxis.label.set_color('black')
         reg.axes.xaxis.label.set_color('black')
-        reg.set_title("Hold-out Set Performance",weight="bold", fontsize=12)
+        reg.set_title("Hold-out Set Performance",weight="bold", fontsize = 15)
 
-        reg.set_yticklabels(reg.get_yticklabels(), size = 8)
-        reg.set_xticklabels(reg.get_xticklabels(), size = 8)
+        reg.set_yticklabels(reg.get_yticklabels(), fontsize = 12)
+        reg.set_xticklabels(reg.get_xticklabels(), fontsize = 12)
         # plt.tick_params(axis='both', which='major', labelsize=10)
 
         reg.spines['left'].set_color('black')
@@ -162,9 +164,8 @@ def plot_cell_comparision(tuple_list, save_folder):
     
     #convert data to percent error
     best_AE = best_AE*100
-    best_MAE = best_AE.mean(axis=0)
     #Plot
-    fig = plt.figure(figsize=(2.5,1))
+    fig = plt.figure(figsize=(2.5,2.5))
     sns.set_theme(font='Arial', font_scale= 2)
     palette = sns.color_palette("hls", 8, as_cmap=False)
     # sns.barplot(best_MAE)

@@ -18,10 +18,10 @@ import os
 def main():
   ################ What parts of the pipeline to run ###############
   plot_f_distribution   = False
-  run_model_selection   = False
-  plot_model_selection  = False
-  run_learning_curve    = False
-  run_feature_reduction = True
+  run_model_selection   = True
+  plot_model_selection  = True 
+  run_learning_curve    = True
+  run_feature_reduction = False
   run_SHAP_explain      = False
   run_SHAP_plots        = False
   plot_SHAP_cluster     = False
@@ -43,6 +43,7 @@ def main():
   # cell_type_list = ['HepG2']
 
   ratiometric = True
+  only_plotting = False
   RLU_floor = 2
   size = True
   zeta = True
@@ -139,7 +140,7 @@ def main():
   ##################### Learning Curve #####################################
   if run_learning_curve:
     print('\n###########################\n\n RUNNING LEARNING CURVE')
-    #Timing
+    #Timing (10 minutes)
     start_time = time.time()
     learning_curve_plot.main(cell_model_list=best_cell_model, 
                             data_file_path=data_file_path, 
@@ -150,7 +151,8 @@ def main():
                             PDI_cutoff=PDI_cutoff, 
                             keep_PDI = keep_PDI,
                             prefix=prefix, 
-                            NUM_ITER=10)
+                            NUM_ITER=10,
+                            plot_only = only_plotting)
     print("\n\n--- %s minutes for Learning Curve---" % ((time.time() - start_time)/60))
 
   #################### Feature Reduction #####################################
@@ -165,7 +167,7 @@ def main():
                             keep_PDI=keep_PDI,
                             prefix=prefix, 
                             N_CV = N_CV,
-                            plot_only= True)
+                            plot_only= only_plotting)
     print("\n\n--- %s minutes for feature reduction---" % ((time.time() - start_time)/60))
   #################### SHAP Analysis #####################################
   if run_SHAP_explain:

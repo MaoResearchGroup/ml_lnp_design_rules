@@ -74,7 +74,7 @@ def tfxn_heatmap(datafile_path, cell_type_list, RLU_floor, prefix, save_path):
 
 def plot_tfxn_dist(cell_type_list, data_file_path, input_param_names, size, PDI, keep_PDI, prefix, RLU_floor, save_path):
 #   Create Subplots
-    fig, ax = plt.subplots(2,3, figsize = (15, 10))
+    fig, ax = plt.subplots(2,3, figsize = (9, 6))
     com_ax = fig.add_subplot(111)
     plt.rcParams["font.family"] = "Arial"
 
@@ -100,14 +100,19 @@ def plot_tfxn_dist(cell_type_list, data_file_path, input_param_names, size, PDI,
             show_legend = True
         else:
             show_legend = False
+        
+        plt.rcParams['font.family'] = 'Arial'
+        plt.rcParams['font.size'] = 12
+
         ax = sns.histplot(data=data, x="RLU_" + cell,multiple="stack", hue="Helper_lipid", hue_order= data.Helper_lipid.unique(), ax = ax, legend=show_legend)
+
         ax.spines['left'].set_color('black')
         ax.spines['bottom'].set_color('black') 
         ax.set(xlim=(RLU_floor, 12), xticks=np.arange(RLU_floor, 15, 3), ylim=(0, 225), yticks=np.arange(0, 250,25))
 
-        ax.set_yticklabels(ax.get_yticklabels(), size = 12)
-        ax.set_xticklabels(ax.get_xticklabels(), size = 12)
-        ax.set_title(cell, fontsize = 20)
+        ax.set_yticklabels(ax.get_yticklabels(),fontsize = 10)
+        ax.set_xticklabels(ax.get_xticklabels(),fontsize = 10)
+        ax.set_title(cell, fontsize = 12)
         ax.set(xlabel=None, ylabel=None)
         # plt.xlabel("ln(RLU)", fontsize=20)
         # plt.ylabel('Counts', fontsize=20)
@@ -116,8 +121,8 @@ def plot_tfxn_dist(cell_type_list, data_file_path, input_param_names, size, PDI,
         # plt.setp(ax.get_legend().get_title(), fontsize='20') # for legend title
         if show_legend:
             # for legend title
-            sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1), fontsize = 20)
-            plt.setp(ax.get_legend().get_title(), fontsize='20')
+            sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1), fontsize = 15)
+            plt.setp(ax.get_legend().get_title(), fontsize='15')
 
 
     # Turn off axis lines and ticks of the big subplot
@@ -127,25 +132,13 @@ def plot_tfxn_dist(cell_type_list, data_file_path, input_param_names, size, PDI,
     com_ax.spines['right'].set_color('none')
     com_ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
     # Set common labels
-    com_ax.set_xlabel("Transfection Efficiency (ln[RLU])", fontsize=24)
-    com_ax.set_ylabel('Counts', fontsize=24)
-    fig.suptitle("Distribution of Screening Results by Cell Type and Helper Lipid", fontsize = 30, weight = "bold")
+    com_ax.set_xlabel("Transfection Efficiency (ln[RLU])", fontsize=15)
+    com_ax.set_ylabel('Counts', fontsize=15)
+    fig.suptitle("LNP Library Transfection Distribution", fontsize = 25, weight = "bold")
 
     #Save Transfection Distribution
     plt.savefig(save_path + f'tfxn_dist.svg', dpi = 600, transparent = True, bbox_inches = "tight")
     plt.close()
-        # #Histogram plot for all features in training data
-        # for param in Train_X.columns:
-        #     f = plt.figure()
-        #     sns.histplot(Train_X.loc[:,param])
-        #     plt.savefig(save_path + f'{cell}_{param}_Dist.png', 
-        #                 dpi=600, format = 'png', 
-        #                 transparent=True, 
-        #                 bbox_inches='tight')
-        #     plt.close()
-
-        
-        #distribution plot of transfection by helper lipid used
 
 def tfxn_clustering(X, Y, input_params, figure_save_path, cell):
 
