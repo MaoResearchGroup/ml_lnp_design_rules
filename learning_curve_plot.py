@@ -28,9 +28,6 @@ def main(cell_model_list, data_file_path, save_path, model_folder,input_param_na
 
             num_splits = 5
 
-            # #open model
-            # with open(model_folder + f"{c}/{model_name}_{c}_Best_Model.pkl", 'rb') as file: # import trained model
-            #     model = pickle.load(file)
             #open model
             with open(model_folder + f"{model_name}/{c}/{model_name}_{c}_Trained.pkl", 'rb') as file: # import trained model
                 model = pickle.load(file)
@@ -89,7 +86,7 @@ def main(cell_model_list, data_file_path, save_path, model_folder,input_param_na
         #Convert mean MAE into Percent error
         all_data['Error'] = all_data['Mean_MAE'] * 100  
 
-        fig, ax = plt.subplots(figsize = (2.5,1))
+        fig, ax = plt.subplots(figsize = (2.5,1.5))
         sns.set_theme(font='Arial', font_scale= 2)
         plt.rcParams['font.family'] = 'Arial'
         plt.rcParams['font.size'] = 12
@@ -97,7 +94,7 @@ def main(cell_model_list, data_file_path, save_path, model_folder,input_param_na
                                 x = "Train_size", y = 'Error', hue = "Score_Type", errorbar = "sd", linewidth = 3)
         
 
-        line.set(xlim=(0, 900), xticks=np.linspace(0,900,6), ylim=(0, 30), yticks=np.arange(0,35,5))
+        line.set(xlim=(0, 900), xticks=np.linspace(0,900,6), ylim=(0, 15), yticks=np.arange(0,20,5))
         line.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
         # add tick marks on x-axis or y-axis
         line.tick_params(bottom=True, left=True)
@@ -106,8 +103,8 @@ def main(cell_model_list, data_file_path, save_path, model_folder,input_param_na
         line.axes.xaxis.label.set_color('black')
 
 
-        line.set_yticklabels(line.get_yticklabels())
-        line.set_xticklabels(line.get_xticklabels())
+        line.set_yticklabels(line.get_yticklabels(), fontsize = 12)
+        line.set_xticklabels(line.get_xticklabels(), fontsize = 12)
         # plt.tick_params(axis='both', which='major', labelsize=10)
 
         line.spines['left'].set_color('black')
@@ -118,8 +115,8 @@ def main(cell_model_list, data_file_path, save_path, model_folder,input_param_na
         line.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
         line.set_title("Learning Curve",weight="bold", fontsize=15)
 
-        plt.xlabel('Training size')
-        plt.ylabel('Percent Error')
+        plt.xlabel('Training size', fontsize = 12)
+        plt.ylabel('Percent Error', fontsize = 12)
         plt.legend(fontsize = 'small', loc='upper right', framealpha = 0)
         plt.savefig(save_path + f'{model_name}_{cell_type}_learning_curve.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
 

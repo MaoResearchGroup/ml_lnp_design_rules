@@ -47,15 +47,17 @@ def extract_training_data(data_file_path, input_param_names, cell_type, size_cut
 def select_input_params(size, zeta, ratio = True):
     #Input parameters
     if ratio:
-        formulation_param_names = ['NP_ratio', 'Dlin-MC3_Helper lipid_ratio',
-                        'Dlin-MC3+Helper lipid percentage', 'Chol_DMG-PEG_ratio'] 
+        formulation_param_names = ['NP_ratio',
+                                   'Chol_DMG-PEG_ratio',
+                                   'Dlin-MC3+Helper lipid percentage',
+                                   'Dlin-MC3_Helper lipid_ratio' ] 
     else:
         formulation_param_names = ['wt_Helper', 'wt_Dlin',
                         'wt_Chol', 'wt_DMG', 'wt_pDNA'] 
     
     lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
     
-    input_param_names = lipid_param_names +  formulation_param_names
+    input_param_names = lipid_param_names + formulation_param_names
 
     #Add physiochemical parameters to inputparameters
     if size == True:

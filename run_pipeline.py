@@ -19,22 +19,22 @@ def main():
   ################ What parts of the pipeline to run ###############
   plot_f_distribution   = False
   run_model_selection   = True
-  plot_model_selection  = True 
+  plot_model_selection  = True
   run_learning_curve    = True
-  run_feature_reduction = False
-  run_SHAP_explain      = False
-  run_SHAP_plots        = False
-  plot_SHAP_cluster     = False
-  plot_Rose             = False
-  plot_bump             = False
+  run_feature_reduction = True
+  run_SHAP_explain      = True
+  run_SHAP_plots        = True
+  plot_SHAP_cluster     = True
+  plot_Rose             = True
+  plot_bump             = True
   
   
 
   ############### PARAMETERS ###############################
 
   model_list = ['RF', 'MLR', 'lasso', 'PLS', 'kNN', 'LGBM', 'XGB', 'DT']#Did not include SVR 
-  cell_type_list = ['HepG2','HEK293','B16', 'PC3', 'N2a', 'ARPE19']
-  #cell_type_list = ['HepG2']
+  #cell_type_list = ['HepG2','HEK293','B16', 'PC3', 'N2a', 'ARPE19']
+  cell_type_list = ['HepG2']
   #List helper lipids
 
   # #Testing
@@ -42,7 +42,7 @@ def main():
   # model_list = ['LGBM']#Did not include SVR 
   # cell_type_list = ['HepG2']
 
-  ratiometric = True
+  ratiometric = False
   only_plotting = False
   RLU_floor = 2
   size = True
@@ -57,7 +57,7 @@ def main():
   ################ SAVING, LOADING##########################
   #RUN_NAME                  = f"Runs/wt_HepG2_All_Size_PDI{PDI_cutoff}_keep_Zeta_RLU{RLU_floor}"
 
-  RUN_NAME                  = f"Runs/Models_Final_All_Size_PDI{PDI_cutoff}_keep_Zeta_RLU{RLU_floor}"
+  RUN_NAME                  = f"Runs/wt_HepG2_Models_Final_All_Size_PDI{PDI_cutoff}_keep_Zeta_RLU{RLU_floor}"
 
   data_file_path            = 'Raw_Data/Final_Master_Formulas.csv' #Where to extract training data
   model_save_path           = f"{RUN_NAME}/Trained_Models/" # Where to save model, results, and training data 
@@ -212,6 +212,7 @@ def main():
                     model_folder=refined_model_save_path,
                     shap_value_path=shap_value_save_path,
                     plot_save_path= bump_plot_save_path,
-                    N_bins=10)
+                    N_bins=10,
+                    feature_order=input_param_names)
 if __name__ == "__main__":
     main()

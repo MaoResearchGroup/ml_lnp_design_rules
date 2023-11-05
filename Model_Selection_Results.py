@@ -7,6 +7,7 @@ import seaborn as sns
 import os
 import utilities
 from utilities import extraction_all
+from scipy import stats
 
 
 def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
@@ -114,22 +115,33 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
         plt.close()
 
         #plt.show()
-def plot_predictions(tuple_list, pred_transfection, exp_transfection, pearson_results, spearman_results, save_folder):
+def plot_predictions(tuple_list, save_folder, model_folder, N_CV):
     ######### Hold Out Validation Pred vs Exp. Plots ########
     for best in tuple_list:
         #Define model and cell
         cell = best[0]
         model_name = best[1]
+        data = extraction_all(model_name, cell, model_folder,N_CV)
+
 
         fig = plt.figure(figsize=(2.5,2.5))
-        predicted = pred_transfection.at[model_name, cell]
-        experimental = exp_transfection.at[model_name, cell]
+
+        experimental = data['Experimental_Transfection']
+        predicted = data['Predicted_Transfection']
+
+        pearsons = stats.pearsonr(predicted, experimental)
+        spearman = stats.spearmanr(predicted, experimental)
+
 
         sns.set_theme(font='Arial', font_scale= 2)
         plt.rcParams['font.size'] = 12
         reg = sns.regplot(x = experimental, y = predicted, color = "k")
-        plt.annotate('Pearsons r = {:.2f}'.format(pearson_results.at[model_name, cell]), xy=(0.1, 0.9), xycoords='axes fraction')
-        plt.annotate('Spearmans r = {:.2f}'.format(spearman_results.at[model_name, cell]), xy=(0.1, 0.8), xycoords='axes fraction')
+
+        plt.annotate('Pearsons r = {:.2f}'.format(pearsons[0]), xy=(0.1, 0.9), xycoords='axes fraction')
+        plt.annotate('Spearmans r = {:.2f}'.format(spearman[0]), xy=(0.1, 0.8), xycoords='axes fraction')
+
+
+
         plt.ylabel('Predicted Transfection', fontsize = 12)
         plt.xlabel('Experimental Transfection',fontsize = 12)
         reg.set(xlim=(0, 1.05), xticks=np.linspace(0,1,5), ylim=(0, 1.05), yticks=np.linspace(0,1,5))
@@ -171,8 +183,9 @@ def plot_cell_comparision(tuple_list, save_folder):
     # sns.barplot(best_MAE)
 
     ##### VIOLIN PLOT
-    bar = sns.barplot(data = best_AE, errorbar = 'sd', palette=palette)
-    plt.ylabel('Percent Error', font = "Arial", fontsize=10)
+    fontsize = 12
+    bar = sns.barplot(data = best_AE, errorbar = 'sd', palette=palette, capsize = 0.5, saturation = 0.8)
+    plt.ylabel('Percent Error', font = "Arial", fontsize=fontsize)
     bar.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
     bar.set(ylim=(-5, 25), yticks=np.arange(-5,30,5))
     # add tick marks on x-axis or y-axis
@@ -180,10 +193,10 @@ def plot_cell_comparision(tuple_list, save_folder):
     # x-axis and y-axis label color
     bar.axes.yaxis.label.set_color('black')
     bar.axes.xaxis.label.set_color('black')
-    bar.set_title("Cell to Cell Comparision",weight="bold", fontsize=12)
+    bar.set_title("Cell to Cell Comparision", weight="bold", fontsize=15)
 
-    bar.set_yticklabels(bar.get_yticklabels(), size = 8)
-    bar.set_xticklabels(bar.get_xticklabels(), size = 8, rotation = 45)
+    bar.set_yticklabels(bar.get_yticklabels(), size = fontsize)
+    bar.set_xticklabels(bar.get_xticklabels(), size = fontsize, rotation = 45, ha='right')
     # plt.tick_params(axis='both', which='major', labelsize=10)
 
     bar.spines['left'].set_color('black')
@@ -264,11 +277,9 @@ def main(model_folder, figure_save_path, cell_type_list, model_list, N_CV):
 
     ###### Hold-out set predictions plot ##############
     plot_predictions(tuple_list = best_cell_model,
-                     pred_transfection=pred_transfection,
-                     exp_transfection=exp_transfection,
-                     pearson_results=pearson_results,
-                     spearman_results=spearman_results,
-                     save_folder=save_folder)
+                     save_folder=save_folder,
+                     model_folder= model_folder,
+                     N_CV = N_CV)
     
 
     ###### Cell-wise comparision plots ##############

@@ -115,23 +115,13 @@ def feature_correlation(X, cell, save):
     g = sns.clustermap(round(np.abs(correlations),2), method="complete", cmap= "flare", annot=True, 
                 annot_kws={"size": 12}, vmin=0, vmax=1, cbar_pos = None, **kws)
 
-    # x0, _y0, _w, _h = g.cbar_pos
-
-    # g.ax_cbar.set_position([x0, .9, g.ax_row_dendrogram.get_position().width, 0.02])
-    # g.ax_cbar.set_title("Spearman's Rank Correlation", fontsize = 12)
-    # g.ax_cbar.tick_params(axis='x', length=5)
-    # for spine in g.ax_cbar.spines:
-    #     g.ax_cbar.spines[spine].set_color('black')
-    #     g.ax_cbar.spines[spine].set_linewidth(2)
-
 
     plt.tick_params(axis='y', which='both', labelsize=20)
     plt.tick_params(axis='x', which='both', labelsize=20)
-    #sns.set(xlabel = None, ylabel = None)
+
     plt.tight_layout()
-    # #Save Figure
+
     plt.savefig(save + f'{cell}/Feature_Correlation_Plot.png', dpi=600, transparent = True, bbox_inches='tight')
-    # #plt.show()
 
 
     return dist_linkage
@@ -193,14 +183,18 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
     #if worse do not remove feature and continue testing the new feature
 
     initial_feature_list = X_features.columns.tolist() #Start with all features
-
     removed_feature_list = []
+
 
     #Evaluate model with all features to find the best MAE
     acc_results,spearman_results,pearson_results, _ = evaluate_model(X_features, Y, range(len(initial_feature_list)), model, N_CV)
     best_MAE = np.mean(acc_results)
 
     #append initial data to storage lists
+    feature_number_list.append(len(initial_feature_list)) # append the number of input features to empty list
+    feature_name_list.append(initial_feature_list) # append the list of feature names to an empty list of lists
+    removed_feature_list.append('')
+
     MAE_list.append(np.mean(acc_results)) # append average MAE value to empty list
     MAE_std_list.append(np.std(acc_results)) # append average MAE value to empty list
 
@@ -210,6 +204,9 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
     pear_list.append(np.mean(pearson_results)) # append average MAE value to empty list
     pear_std_list.append(np.std(pearson_results)) # append average MAE value to empty list
     print(f'\n INITIAL MAE IS {best_MAE}')
+
+    #Update the 
+
 
     best_results = [len(initial_feature_list), initial_feature_list, 
                             removed_feature_list, 
@@ -234,7 +231,7 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
         acc_results, spearman_results, pearson_results, new_model = evaluate_model(X_features, Y, selected_features, model, N_CV)
 
         
-        
+        iteration +=1
         # If the performance is equal or worse than previous than update parameters else keep the feature
         if round(np.mean(acc_results),3) <= round(best_MAE,3):
             print(f'\n\n{feature} WAS REMOVED AND BEST RESULTS UPDATED\n\n') 
@@ -268,12 +265,9 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
             pear_list.append(np.mean(pearson_results)) # append average MAE value to empty list
             pear_std_list.append(np.std(pearson_results)) # append average MAE value to empty list
 
-        iteration += 1     
         print('\n################################################################\n\nSTATUS REPORT:') 
-        #print('Iteration '+str(n+1)+' of '+str(400)+' completed') 
         print('Iteration '+str(iteration)+' of '+str(len(ordered_feature_removal_list))+' completed') 
         print('No_Tested_Features:', len(tested_features))
-        #print('Ward Linkage Distance:', distance)
         print('Test_Score: %.3f' % (np.mean(acc_results)))
         print('Spearman_Score: %.3f' % (np.mean(spearman_results)))
         print('Pearson_Score: %.3f' % (np.mean(pearson_results)))
@@ -317,11 +311,8 @@ def evaluate_model(X,Y, selected_features, model, N_CV):
     spearman_list = []
     pearson_list = []
     #Kfold CV
-    for i in range(10): #For loop that splits and evaluates the data ten times
-
-        #print(f"\n LOOP: {i+1}/10")
-
-        cv_outer = KFold(n_splits=N_CV, random_state= i+1, shuffle=True)
+    for i in range(5): #For loop that splits and evaluates the data ten times
+        cv_outer = KFold(n_splits=N_CV, random_state= i+100, shuffle=True)
         for j, (train_index, test_index) in enumerate(cv_outer.split(X)):
             #Split X
             X_train = X.iloc[train_index]
@@ -362,7 +353,11 @@ def plot_feature_reduction(stats_df, cell_type, model_name, save):
 
 
     # Create a figure with two y-axes
-    fig, ax1 = plt.subplots(figsize=(5, 2), facecolor='white')
+    fig, ax1 = plt.subplots(figsize=(2.5, 1.5), facecolor='white')
+    # Adjust font size and style
+    plt.rcParams['font.family'] = 'Arial'
+    plt.rcParams['font.size'] = 12
+
     ax2 = ax1.twinx()
 
     # Plot the points with error bars for Average MAE
@@ -390,28 +385,25 @@ def plot_feature_reduction(stats_df, cell_type, model_name, save):
     # Draw a line connecting the points for Pearson correlation coefficient
     ax2.plot(stats_df['# of Features'], stats_df['Pearson'], color='green', alpha = 0.8,label='Pearson', linewidth=lw)
 
-    # Adjust font size and style
-    plt.rcParams['font.family'] = 'Arial'
-    plt.rcParams['font.size'] = 10
 
     # Set labels for the x-axis and y-axes
     label_size = 12
 
     ax1.set_xlabel('Number of Remaining Features', fontsize = label_size)
     ax1.set_ylabel('Percent Error', fontsize = label_size)
-    ax2.set_ylabel('Correlation Coefficients', fontsize = label_size)
-    ax1.set_title("Feature Reduction",weight="bold", fontsize=15)
+    ax2.set_ylabel('Correlation', fontsize = label_size)
+    ax1.set_title("Feature Reduction", weight="bold", fontsize=15)
     # Reverse the x-axis
     ax1.invert_xaxis()
 
     # Set labels on x and y axis
-    ax1.set_xticks(np.arange(int(stats_df['# of Features'].min()), int(stats_df['# of Features'].max()) + 1, 1))
-    ax1.set_yticks(np.arange(0, 14, 2))
+    ax1.set_xticks(np.arange(int(stats_df['# of Features'].min()), int(stats_df['# of Features'].max()) + 1, 2))
+    ax1.set_yticks(np.arange(0, 20, 5))
     ax1.tick_params(axis = 'y', labelsize=label_size)
     ax1.tick_params(axis = 'x', labelsize=label_size)
 
     # Set right axis y limits
-    ax2.set_yticks(np.linspace(0.4, 1, 7))
+    ax2.set_yticks(np.linspace(0.5, 1, 3))
     ax2.tick_params(axis = 'y', labelsize=label_size)
 
 
@@ -420,11 +412,21 @@ def plot_feature_reduction(stats_df, cell_type, model_name, save):
     lines2, labels2 = ax2.get_legend_handles_labels()
     lines = lines1 + lines2
     labels = labels1 + labels2
+    ax1.spines['left'].set_color('black')
+    ax1.spines['bottom'].set_color('black')        # x-axis and y-axis spines
+    ax1.spines['right'].set_color('black')
+    ax1.spines['top'].set_color('black')
+
 
     # Update the legend titles
-    ax1.legend(lines, ['MAE', 'Spearman', 'Pearson'], fontsize = 'small', loc='lower right', framealpha = 0)
+    ax1.legend(lines, ['MAE', 'Spearman', 'Pearson'],
+            fontsize = 'small', 
+            loc='lower left', 
+            bbox_to_anchor=(-0.3, -0.65),
+            ncol = 3,
+            framealpha = 0)
 
-
+    
     # Save the plot as a high-resolution image (e.g., PNG or PDF)
     plt.savefig(save + f'{cell_type}/{cell_type}_{model_name}_Feature_Reduction_Plot.svg', dpi=600, transparent = True, bbox_inches='tight')
 
@@ -477,28 +479,28 @@ def main(cell_model_list, model_save_path, refined_model_save_path, input_param_
             results, best_results, best_model, best_data = eval_feature_reduction(dist_link, Train_X, Y, trained_model, N_CV)
 
             #Save Results into CSV file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Feature_Red_Results.csv', 'w', index = False, encoding = 'utf-8-sig') as f: #Save file to csv
-                results.to_csv(f)
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Feature_Red_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+                results.to_csv(f, index = False)
 
             #Save Best Results into CSV file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.csv', 'w', index = False, encoding = 'utf-8-sig') as f: #Save file to csv
-                best_results.to_csv(f)
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+                best_results.to_csv(f, index = False)
 
             #Save Best Results into pkl file
             with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Model_Results.pkl', 'wb') as file:
                 pickle.dump(best_results, file)
 
             #Save Best training data into CSV file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.csv', 'w', index = False, encoding = 'utf-8-sig') as f: #Save file to csv
-                best_data.to_csv(f)       
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+                best_data.to_csv(f, index = False)       
 
             #Save Best training data into pkl file
             with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_Best_Training_Data.pkl', 'wb') as file:
                 pickle.dump(best_data, file)
 
             #Save Y into CSV file
-            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_output.csv', 'w', index = False, encoding = 'utf-8-sig') as f: #Save file to csv
-                Y.to_csv(f)       
+            with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_output.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
+                Y.to_csv(f, index = False)       
 
             #Save Best training data into pkl file
             with open(refined_model_save_path + f'/{cell}/{model_name}_{cell}_output.pkl', 'wb') as file:
