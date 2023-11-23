@@ -53,7 +53,7 @@ def bumpplot(dataframe, lw, save_path, feature_order = None):
 
     plt.xticks(np.arange(len(cell_names)), cell_names, fontsize = 12)
 
-    plt.title('Design Parameters for Cell Type-Specific LNP Formulations', fontsize = 20, weight = 'bold')
+    #plt.title('Design Parameters for Cell Type-Specific LNP Formulations', fontsize = 20, weight = 'bold')
     
     sns.despine(left=True, bottom=True)  # Updated to keep the left axis
     ax.set_ylim(-0.20,1.05)

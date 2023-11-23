@@ -92,9 +92,9 @@ class NESTED_CV:
         
         elif model_type == 'RF':
           self.user_defined_model = RandomForestRegressor(random_state=4)
-          self.p_grid ={'n_estimators':[100,300,400],
+          self.p_grid ={'n_estimators':[100,200,300,400],
                         'criterion':['squared_error', 'absolute_error'],
-                        'max_depth':[None],
+                        'max_depth': [2, 6, 10, 14, 18, 22, 26, 30],
                         'min_samples_split':[2,4,6,8],
                         'min_samples_leaf':[1,2,4],
                         'min_weight_fraction_leaf':[0.0],
@@ -104,29 +104,7 @@ class NESTED_CV:
                         'bootstrap':[True],
                         'oob_score':[True],
                         'ccp_alpha': [0, 0.005, 0.01]}
-          # # Number of trees in random forest
-          # n_estimators = [int(x) for x in np.linspace(start = 1, stop = 200, num = 10)]
-          # # Number of features to consider at every split
-          # max_features = [None, 'sqrt']
-          # # Maximum number of levels in tree
-          # #max_depth = [int(x) for x in np.linspace(2, 30, num = 11)]
-          # max_depth = [int(x) for x in np.linspace(5, 30, num = 11)]
-          # max_depth.append(None)
-          # # Minimum number of samples required to split a node
-          # min_samples_split = [2, 5, 10]
-          # # Minimum number of samples required at each leaf node
-          # min_samples_leaf = [1, 2, 4]
-          # # Method of selecting samples for training each tree
-          # bootstrap = [True, False]
-          # # Create the random grid
-          # self.p_grid = {'n_estimators': n_estimators,
-          #               'max_features': max_features,
-          #               'max_depth': max_depth,
-          #               'min_samples_split': min_samples_split,
-          #               'min_samples_leaf': min_samples_leaf,
-          #               'bootstrap': bootstrap}
           
-
         elif model_type == 'LGBM':
           self.user_defined_model = LGBMRegressor(random_state=10) #was 4
           self.p_grid ={"n_estimators":[100,150,200,250,300,400,500,600],
@@ -168,18 +146,9 @@ class NESTED_CV:
         else:
           print("#######################\nSELECTION UNAVAILABLE!\n#######################\n\nPlease chose one of the following options:\n\n 'MLR'for multiple linear regression\n\n 'lasso' for multiple linear regression with east absolute shrinkage and selection operator (lasso)\n\n 'kNN'for k-Nearest Neighbors\n\n 'PLS' for partial least squares\n\n 'SVR' for support vertor regressor\n\n 'DT' for decision tree\n\n 'RF' for random forest\n\n 'LGBM' for LightGBM\n\n 'XGB' for XGBoost\n\n 'NGB' for NGBoost")
 
-    def input_target(self, data_file_path, cell_type, input_param_names, prefix, size_cutoff, PDI_cutoff, keep_PDI, RLU_floor):
-        self.X, self.Y, self.cell_data = utilities.extract_training_data(data_file_path=data_file_path, 
-                              input_param_names=input_param_names, 
-                              cell_type=cell_type, 
-                              size_cutoff=size_cutoff, 
-                              PDI_cutoff=PDI_cutoff, 
-                              keep_PDI = keep_PDI, 
-                              prefix=prefix,
-                              RLU_floor= RLU_floor)
-
+    def input_target(self, X, y, data):
+        self.X, self.Y, self.cell_data = X, y, data
         self.F = self.cell_data['Formula label']
-        
     
     def cross_validation(self, input_value):
         if input_value == None:
@@ -293,7 +262,11 @@ class NESTED_CV:
     
     ###### Retrain best model across 5 datasplits to evaluate the overall MAE
     def overall_MAE(self, N_CV):
-        print('BEST MODEL VALIDATION')
+        #Initialize model with best hyperparameters
+        self.best_model_params = self.CV_dataset.iloc[0,5]
+        best_model = self.user_defined_model.set_params(**self.best_model_params)
+        
+        #Result Storage
         self.best_itr_number = [] # create new empty list for itr number 
         self.best_MAE = []
         self.best_spearman = []
@@ -302,7 +275,11 @@ class NESTED_CV:
         self.best_F_test_list = []
         self.best_y_test_list = []
         self.best_pred_list = []
+
+        #Kfold object
         cv = KFold(n_splits=N_CV, random_state= 10, shuffle=True)
+
+        #Train and measure model performance across splits
         for i, (train_index, test_index) in enumerate(cv.split(self.X)):
 
           # #X = input parameters, y = transfection, F = formulation number
@@ -323,8 +300,8 @@ class NESTED_CV:
 
           #### train and evaluate model on the hold out dataset
           y_train = np.ravel(y_train)
-          self.best_model.fit(X_train, y_train)
-          yhat = self.best_model.predict(X_test)
+          best_model.fit(X_train, y_train)
+          yhat = best_model.predict(X_test)
 
           #Cell-type transfection predictions
           self.best_pred_list.append(yhat)

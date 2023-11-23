@@ -7,7 +7,7 @@ import pickle
 import os
 from sklearn.preprocessing import MinMaxScaler
 from collections import defaultdict
-from utilities import extract_training_data, get_spearman
+from utilities import extract_training_data, get_spearman, truncate_colormap
 import plotly.figure_factory as ff
 
 from sklearn.decomposition import PCA
@@ -15,6 +15,9 @@ from PIL import Image
 
 ########### MAIN ####################################
 def tfxn_heatmap(datafile_path, cell_type_list, RLU_floor, prefix, save_path):
+    plt.rcParams["font.family"] = "Arial"
+    plt.rcParams['font.size'] = 12
+    
     df = pd.read_csv(datafile_path)
     #print(df)
     training_data = df.loc[:,df.columns.isin(prefix + x for x  in cell_type_list)] #Take input parameters and associated values
@@ -36,19 +39,21 @@ def tfxn_heatmap(datafile_path, cell_type_list, RLU_floor, prefix, save_path):
         for cell2 in cell_type_list:
             all_corr.loc[cell1, cell2] = get_spearman(training_data, cell1, cell2)
     fig = plt.subplot()
-    plt.figure(figsize=(10,9))
-    heatmap = sns.heatmap(round(np.abs(all_corr),2), vmin=.2, vmax=1, cmap='mako_r', annot = True, annot_kws={"size": 18}, cbar = False)
+    plt.figure(figsize=(3,3))
+    heatmap = sns.heatmap(round(np.abs(all_corr),2), vmin=.2, vmax=1, cmap='Blues', annot = True, annot_kws={"size": 6}, cbar = False)
     heatmap.invert_yaxis()
-    plt.tick_params(axis='y', which='both', labelsize=18)
-    plt.tick_params(axis='x', which='both', labelsize=18)
+    plt.tick_params(axis='y', which='both', labelsize=8)
+    plt.tick_params(axis='x', which='both', labelsize=8)
     cbar = heatmap.figure.colorbar(heatmap.collections[0])
-    cbar.set_ticks([0.2, 0.4, 0.6, 0.8, 1.0], fontsize = 30)
-    cbar.ax.tick_params(labelsize=20)
+    cbar.set_ticks([0.2, 0.4, 0.6, 0.8, 1.0], fontsize = 4)
+    cbar.ax.tick_params(labelsize=6)
 
     plt.gca()
     plt.savefig(save_path + 'All_Data_Tfxn_Heatmap.svg', dpi=600, format = 'svg', transparent=True, bbox_inches='tight')
     plt.close()           
-            
+
+
+    #### PLOTTING THE HEATMAP FOR LIPID SPECIFIC FORMULATIONS ACROSS CELL TYPES        
     # #Iterate through subsets based on helper lipid used in formulations
     # print(training_data["Helper_lipid"].unique())
     # for lipid in training_data["Helper_lipid"].unique():
@@ -74,10 +79,13 @@ def tfxn_heatmap(datafile_path, cell_type_list, RLU_floor, prefix, save_path):
 
 def plot_tfxn_dist(cell_type_list, data_file_path, input_param_names, size, PDI, keep_PDI, prefix, RLU_floor, save_path):
 #   Create Subplots
-    fig, ax = plt.subplots(2,3, figsize = (9, 6))
-    com_ax = fig.add_subplot(111)
     plt.rcParams["font.family"] = "Arial"
+    plt.rcParams['font.size'] = 12
+    fig, ax = plt.subplots(2,3, sharex = True, sharey=True, figsize = (4, 3))
 
+    #limits
+    # plt.ylim(0, 215)
+    # plt.xlim(0, 12)
 
     #loop through subplots
     for i, ax in enumerate(ax.flatten()):
@@ -96,48 +104,43 @@ def plot_tfxn_dist(cell_type_list, data_file_path, input_param_names, size, PDI,
 
 
         sns.set_palette("husl", 6)
-        if i ==2:
+        sns.set(font_scale = 1)
+        if i ==1:
             show_legend = True
         else:
             show_legend = False
         
-        plt.rcParams['font.family'] = 'Arial'
-        plt.rcParams['font.size'] = 12
+        ax = sns.histplot(data=data, x="RLU_" + cell,
+                          multiple="stack", 
+                          hue="Helper_lipid", 
+                          binwidth = 0.5,
+                          hue_order= data.Helper_lipid.unique(), 
+                          ax = ax, 
+                          legend=show_legend,
+                          line_kws={'linewidth': 2},
+                          edgecolor='white') 
+        # ax.set_yticks(np.arange(0, 300,50), fontsize = 6)
+        ax.set_xticks(np.arange(RLU_floor, 15, 3), fontsize = 6)
 
-        ax = sns.histplot(data=data, x="RLU_" + cell,multiple="stack", hue="Helper_lipid", hue_order= data.Helper_lipid.unique(), ax = ax, legend=show_legend)
+        if i in [3, 4, 5]:
+            ax.set_xlabel('ln(RLU)')
 
-        ax.spines['left'].set_color('black')
-        ax.spines['bottom'].set_color('black') 
-        ax.set(xlim=(RLU_floor, 12), xticks=np.arange(RLU_floor, 15, 3), ylim=(0, 225), yticks=np.arange(0, 250,25))
 
-        ax.set_yticklabels(ax.get_yticklabels(),fontsize = 10)
-        ax.set_xticklabels(ax.get_xticklabels(),fontsize = 10)
-        ax.set_title(cell, fontsize = 12)
-        ax.set(xlabel=None, ylabel=None)
-        # plt.xlabel("ln(RLU)", fontsize=20)
-        # plt.ylabel('Counts', fontsize=20)
-        
-        # plt.setp(ax.get_legend().get_texts(), fontsize='20') # for legend text
-        # plt.setp(ax.get_legend().get_title(), fontsize='20') # for legend title
+        ax.text(0.5, 0.85, cell, transform=ax.transAxes,
+        fontsize=8, ha='center')
+
         if show_legend:
-            # for legend title
-            sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1), fontsize = 15)
-            plt.setp(ax.get_legend().get_title(), fontsize='15')
-
-
-    # Turn off axis lines and ticks of the big subplot
-    com_ax.spines['top'].set_color('none')
-    com_ax.spines['bottom'].set_color('none')
-    com_ax.spines['left'].set_color('none')
-    com_ax.spines['right'].set_color('none')
-    com_ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
-    # Set common labels
-    com_ax.set_xlabel("Transfection Efficiency (ln[RLU])", fontsize=15)
-    com_ax.set_ylabel('Counts', fontsize=15)
-    fig.suptitle("LNP Library Transfection Distribution", fontsize = 25, weight = "bold")
+            sns.move_legend(
+                ax, "lower center",
+                bbox_to_anchor=(.5, 1), 
+                ncol=3, 
+                title='Helper Lipid Choice', 
+                frameon=False)
+            plt.setp(ax.get_legend().get_texts(), fontsize='8')
+            plt.setp(ax.get_legend().get_title(), fontsize='8') 
 
     #Save Transfection Distribution
-    plt.savefig(save_path + f'tfxn_dist.svg', dpi = 600, transparent = True, bbox_inches = "tight")
+    plt.savefig(save_path + f'tfxn_dist.png', dpi = 600, transparent = True, bbox_inches = "tight")
     plt.close()
 
 def tfxn_clustering(X, Y, input_params, figure_save_path, cell):

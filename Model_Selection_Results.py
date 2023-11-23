@@ -10,33 +10,17 @@ from utilities import extraction_all
 from scipy import stats
 
 
-def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
+def plot_AE_Box(cell_type_names, model_list, model_path, save_path, N_CV):
+
+    plt.rcParams['font.family'] = 'Arial'
+    plt.rcParams['font.size'] = 12
+    
     for cell in cell_type_names:
         #Extract data for all models
-        ALL_MLR = extraction_all('MLR', cell, model_path,N_CV)
-        ALL_lasso = extraction_all('lasso', cell, model_path,N_CV)
-        ALL_kNN = extraction_all('kNN', cell, model_path,N_CV)
-        ALL_PLS = extraction_all('PLS', cell, model_path,N_CV)
-        ALL_DT = extraction_all('DT', cell, model_path,N_CV)
-        ALL_RF = extraction_all('RF', cell, model_path,N_CV)
-        ALL_LGBM = extraction_all('LGBM', cell, model_path,N_CV)
-        ALL_XGB = extraction_all('XGB', cell, model_path,N_CV)
-
-        #Append into a single dataframe
-        ALL_AE = pd.DataFrame(ALL_MLR['Absolute_Error'], columns=['MLR'])
-        ALL_AE['MLR'] = ALL_MLR['Absolute_Error']
-        ALL_AE['lasso'] = ALL_lasso['Absolute_Error']
-        ALL_AE['kNN'] = ALL_kNN['Absolute_Error']
-        ALL_AE['PLS'] = ALL_PLS['Absolute_Error']
-        #ALL_AE['SVR'] = ALL_SVR['Absolute_Error']
-        ALL_AE['DT'] = ALL_DT['Absolute_Error']
-        ALL_AE['RF'] = ALL_RF['Absolute_Error']
-        ALL_AE['LGBM'] = ALL_LGBM['Absolute_Error']
-        ALL_AE['XGB'] = ALL_XGB['Absolute_Error']
-        #ALL_AE['NGB'] = ALL_NGB['Absolute_Error']
-        #ALL_AE['NN'] = ALL_NN['Absolute_Error']
-        sorted_index = ALL_AE.mean().sort_values().index
-        df=ALL_AE[sorted_index]
+        df = utilities.get_Model_Selection_Error(cell, 
+                                            model_list, 
+                                            model_path, 
+                                            N_CV)
 
         if os.path.exists(save_path) == False:
             os.makedirs(save_path, 0o666)
@@ -50,7 +34,7 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
 
         ############## PLOTTING
         # figure set-up - size
-        f, boxplot = plt.subplots(figsize=(7, 3.5))
+        f, boxplot = plt.subplots(figsize=(6, 3))
 
         # choose color scheme
         #palette = sns.color_palette("Paired")
@@ -80,7 +64,7 @@ def plot_AE_Box(cell_type_names, model_path, save_path, N_CV):
                                 alpha=0.5, size=6, linewidth=0.3, palette='dark:black', jitter = True, zorder=0)
 
         # Title
-        boxplot.axes.set_title("Model Performance Ranked by Percent Error", font = "Arial",fontsize=20, color="Black", weight="bold")
+        # boxplot.axes.set_title("Model Performance Ranked by Percent Error", font = "Arial",fontsize=20, color="Black", weight="bold")
 
         # Title - x-axis/y-axis
         #boxplot.set_xlabel("Model index", fontsize=12)
@@ -135,7 +119,12 @@ def plot_predictions(tuple_list, save_folder, model_folder, N_CV):
 
         sns.set_theme(font='Arial', font_scale= 2)
         plt.rcParams['font.size'] = 12
-        reg = sns.regplot(x = experimental, y = predicted, color = "k")
+        reg = sns.regplot(x = experimental, 
+                          y = predicted,
+                          marker='.', 
+                          scatter_kws={"color": "m", 
+                                       "alpha": 0.6}, 
+                          line_kws={"color": "black", "linestyle":'--'})
 
         plt.annotate('Pearsons r = {:.2f}'.format(pearsons[0]), xy=(0.1, 0.9), xycoords='axes fraction')
         plt.annotate('Spearmans r = {:.2f}'.format(spearman[0]), xy=(0.1, 0.8), xycoords='axes fraction')
@@ -144,14 +133,14 @@ def plot_predictions(tuple_list, save_folder, model_folder, N_CV):
 
         plt.ylabel('Predicted Transfection', fontsize = 12)
         plt.xlabel('Experimental Transfection',fontsize = 12)
-        reg.set(xlim=(0, 1.05), xticks=np.linspace(0,1,5), ylim=(0, 1.05), yticks=np.linspace(0,1,5))
+        reg.set(xlim=(-0.05, 1.05), xticks=np.linspace(0,1,5), ylim=(-0.05, 1.05), yticks=np.linspace(0,1,5))
         reg.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
         # add tick marks on x-axis or y-axis
         reg.tick_params(bottom=True, left=True)
         # x-axis and y-axis label color
         reg.axes.yaxis.label.set_color('black')
         reg.axes.xaxis.label.set_color('black')
-        reg.set_title("Hold-out Set Performance",weight="bold", fontsize = 15)
+        # reg.set_title("Hold-out Set Performance",weight="bold", fontsize = 15)
 
         reg.set_yticklabels(reg.get_yticklabels(), fontsize = 12)
         reg.set_xticklabels(reg.get_xticklabels(), fontsize = 12)
@@ -179,21 +168,22 @@ def plot_cell_comparision(tuple_list, save_folder):
     #Plot
     fig = plt.figure(figsize=(2.5,2.5))
     sns.set_theme(font='Arial', font_scale= 2)
-    palette = sns.color_palette("hls", 8, as_cmap=False)
+    palette = sns.color_palette("Set2", 6, as_cmap=False)
     # sns.barplot(best_MAE)
 
     ##### VIOLIN PLOT
     fontsize = 12
-    bar = sns.barplot(data = best_AE, errorbar = 'sd', palette=palette, capsize = 0.5, saturation = 0.8)
+    # bar = sns.barplot(data = best_AE, errorbar = 'sd', palette=palette, capsize = 0.15,errwidth=0.5,saturation = 0.5)
+    bar = sns.boxplot(data = best_AE, palette=palette,saturation = 0.5, fliersize = 2)
     plt.ylabel('Percent Error', font = "Arial", fontsize=fontsize)
     bar.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
-    bar.set(ylim=(-5, 25), yticks=np.arange(-5,30,5))
+    bar.set(ylim=(0, 60), yticks=np.arange(0,70,10))
     # add tick marks on x-axis or y-axis
     bar.tick_params(bottom=True, left=True)
     # x-axis and y-axis label color
     bar.axes.yaxis.label.set_color('black')
     bar.axes.xaxis.label.set_color('black')
-    bar.set_title("Cell to Cell Comparision", weight="bold", fontsize=15)
+    # bar.set_title("Cell to Cell Comparision", weight="bold", fontsize=15)
 
     bar.set_yticklabels(bar.get_yticklabels(), size = fontsize)
     bar.set_xticklabels(bar.get_xticklabels(), size = fontsize, rotation = 45, ha='right')
@@ -266,7 +256,7 @@ def main(model_folder, figure_save_path, cell_type_list, model_list, N_CV):
        os.makedirs(save_folder, 0o666)
 
     ###### Model Selection Box Plot ##############
-    plot_AE_Box(cell_type_list, model_folder, save_folder, N_CV)
+    plot_AE_Box(cell_type_list, model_list, model_folder, save_folder, N_CV)
     
     ###### Select best cell/model pairs ##########
     cell_model = utilities.get_best_model_cell(figure_save_path = save_folder, 

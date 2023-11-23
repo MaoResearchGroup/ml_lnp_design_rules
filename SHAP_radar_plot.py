@@ -7,13 +7,8 @@ import pandas as pd
 import seaborn as sns
 import os
 from utilities import get_mean_shap
-
-
-
 import plotly.io as pio
-#pio.renderers.default = 'svg'
 pio.renderers.default = "notebook"
-
 import plotly.express as px
 import plotly.graph_objects as go
 
