@@ -13,6 +13,7 @@ import copy
 from sklearn.model_selection import learning_curve
 import time
 import shap
+import pickle
 
 
 ########## INITIAL FEATURE ANALYSIS PLOTS ##################
@@ -91,7 +92,7 @@ def plot_tfxn_dist_comp(pipeline_list, raw, save):
     sns.set(font_scale = 1)
 
     #limits
-    plt.ylim(0, 400)
+    plt.ylim(-10, 400)
     plt.xlim(0, 13)
 
     #loop through subplots
@@ -151,6 +152,8 @@ def plot_tfxn_dist_comp(pipeline_list, raw, save):
     #Save Transfection Distribution
     plt.savefig(save + f'tfxn_dist.png', dpi = 600, transparent = True, bbox_inches = "tight")
     plt.close()
+
+
 def tfxn_dist(pipeline, raw, save):
     #Config
     cell = pipeline['Cell']
@@ -451,6 +454,68 @@ def plot_cell_comparision(pipeline_list, save):
     plt.savefig(save + f'Cell_wise_model_Comparision.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
     plt.close()
 
+def tabulate_model_selection_results(pipeline_list,save):
+    ##########  Collect all Results ###############
+    all_results = pd.DataFrame(columns = ['Model', 'Cell_Type', 'Valid Score', 'Test Score','Spearmans Rank','Pearsons Correlation','Model Parms', 'Experimental_Transfection','Predicted_Transfection'])
+
+    cell_type_list = []
+    all_model_list = []
+    for pipe in pipeline_list:
+        cell = pipe['Cell']
+        model_list = pipe['Model_Selection']['Model_list']
+        cell_type_list.append(cell)
+        for model_name in model_list:
+            if model_name not in all_model_list:
+                all_model_list.append(model_name)
+            
+            result_file_path = pipe['Saving']['Models'] + f'{model_name}/HP_Tuning_Results.pkl'
+
+            with open(result_file_path, 'rb') as file:
+                results = pickle.load(file)
+                results.drop(columns = ['Iter','Formulation_Index'], inplace = True)
+
+                #Combine the predictions and experimental transfection data into a single row
+                results = results.iloc[[0]] #keep only Best model, return dataframe type
+                results.insert(0, 'Model', model_name) #Add model
+                results.insert(1, 'Cell_Type', cell) #Add cell type
+                all_results = pd.concat([results, all_results.loc[:]], ignore_index = True).reset_index(drop = True)
+    
+    #Save results
+    if os.path.exists(save) == False:
+       os.makedirs(save, 0o666)
+    with open(save + "Model_Selection_Results.csv", 'w', encoding = 'utf-8-sig') as f:
+        all_results.to_csv(f)
+    
+    
+    
+    ########## Extract MAE, Spearman, Pearson for all models for all cell types##################
+    MAE_results = pd.DataFrame(index = model_list, columns = cell_type_list)
+    spearman_results = pd.DataFrame(index = model_list, columns = cell_type_list)
+    pearson_results = pd.DataFrame(index = model_list, columns = cell_type_list)
+    pred_transfection = pd.DataFrame(index = model_list, columns = cell_type_list)
+    exp_transfection = pd.DataFrame(index = model_list, columns = cell_type_list)
+    
+    for cell in cell_type_list:
+        for model in all_model_list:
+            m1 = all_results["Model"] == model
+            m2 = all_results["Cell_Type"] == cell
+            MAE_results.at[model, cell] = all_results[m1&m2]['Test Score'].values[0]
+            spearman_results.at[model, cell] = all_results[m1&m2]['Spearmans Rank'].values[0][0]
+            pearson_results.at[model, cell] = all_results[m1&m2]['Pearsons Correlation'].values[0][0]
+            pred_transfection.at[model, cell] = all_results[m1&m2]['Predicted_Transfection'].values[0]
+            exp_transfection.at[model, cell] = all_results[m1&m2]['Experimental_Transfection'].values[0].transpose()[0] #Format as list
+    
+    ########## Tabulate Results ##################
+    with open(save + "Model_Selection_MAE.csv", 'w', encoding = 'utf-8-sig') as f:
+        MAE_results.to_csv(f)
+    with open(save + "Model_Selection_spearman.csv", 'w', encoding = 'utf-8-sig') as f:
+        spearman_results.to_csv(f)
+    with open(save + "Model_Selection_pearson.csv", 'w', encoding = 'utf-8-sig') as f:
+        pearson_results.to_csv(f)   
+    
+    print('\nSaved All Model Selection Tables')
+
+    return all_results, MAE_results, spearman_results, pearson_results
 ########## FEATURE REDUCTION PLOTS ##################
 def plot_feature_reduction(pipeline):
     
@@ -616,6 +681,8 @@ def get_learning_curve(pipeline, NUM_ITER =5, num_splits =5, num_sizes= 50):
     #Update Pipeline
     pipeline['Learning_Curve']['Train_Error'] = train_scores_mean
     pipeline['Learning_Curve']['Valid_Error'] = validation_scores_mean
+    pipeline['STEPS_COMPLETED']['Learning_Curve'] = True
+
     print('\n######## Learning_Curve Results Saved')
     print("\n\n--- %s minutes for Learning Curve---" % ((time.time() - start_time)/60))  
     return pipeline

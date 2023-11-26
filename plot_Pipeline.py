@@ -1,4 +1,5 @@
 import pickle
+from utilities import save_pipeline
 import plotting_functions as plotter
 import os
 
@@ -6,8 +7,8 @@ def main():
 
         #Specify which plots to make
         prelim                 = False
-        plot_f_distribution    = True
-        plot_model_selection   = False
+        plot_f_distribution    = False
+        plot_model_selection   = True
         feature_reduction      = False
         run_learning_curve     = False
         run_SHAP_plots         = False
@@ -42,7 +43,7 @@ def main():
                 print(f"Directory '{manuscript_save_path}' already exists.")
         
         
-        #### MANUSCRIPT WIDE FIGURES
+        #### MANUSCRIPT WIDE FIGURES/TABLES
         pipe_list = []
         for c in cell_type_list:
                 #Import Pipeline of interest
@@ -61,6 +62,8 @@ def main():
         if plot_model_selection:
                 plotter.plot_cell_comparision(pipeline_list = pipe_list,
                                               save= manuscript_save_path)
+                plotter.tabulate_model_selection_results(pipeline_list=pipe_list,
+                                                         save=manuscript_save_path)
         
         #Design Feature Bump Plots
         if plot_bump:
@@ -104,25 +107,28 @@ def main():
 
                         plotter.plot_AE_Box(pipeline_results, model_selection_save)
                         plotter.plot_predictions(pipeline_results, model_selection_save)
+                        
 
                 #Plot Feature Reduction
                 if feature_reduction:
-                        print('\n###########################\n\n Feature Reduction PLOTTING')
+                        print('\n########## FEATURE REDUCTION PLOTTING')
                         plotter.plot_feature_reduction(pipeline_results)
 
                 # Learning Curve 
                 if run_learning_curve:
+                        print('\n########## LEARNING CURVE PLOTTING')
                         #Timing (10 minutes)
                         if pipeline_results['STEPS_COMPLETED']['Learning_Curve'] == False:
                                 pipeline_results = plotter.get_learning_curve(pipeline_results)
-                                pipeline_results['STEPS_COMPLETED']['Learning_Curve'] = True
-                                with open(pipeline_path , 'wb') as file:
-                                        pickle.dump(pipeline_results, file)
-                                print(f"\n\n--- Updated Pipeline with Learning Curve {c} CONFIG AND RESULTS ---")
+                                
+                                save_pipeline(pipeline=pipeline_results, path = pipeline_path, 
+                                              step= 'LEARNING CURVE')
 
                         plotter.plot_learning_curve(pipeline_results)
+
                 #SHAP Plots
                 if run_SHAP_plots:
+                        print('\n########## SHAP PLOTTING')
                         SHAP_save = pipeline_results['Saving']['Figures'] + 'SHAP/'
                         #Check save path
                         if os.path.exists(SHAP_save) == False:

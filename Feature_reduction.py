@@ -408,6 +408,7 @@ def main(pipeline):
     pipeline['Feature_Reduction']['Refined_Model'] = best_model
     pipeline['Feature_Reduction']['Final_Results'] = best_results
     pipeline['Feature_Reduction']['Reduction_Results'] = results
+    pipeline['STEPS_COMPLETED']['Feature_Reduction'] = True
 
     print("\n\n--- %s minutes for feature reduction---" % ((time.time() - start_time)/60))  
 

@@ -90,7 +90,7 @@ def run_Model_Selection(pipeline):
   pipeline['Model_Selection']['Best_Model']['MAE'] = MAE[0]
   pipeline['Model_Selection']['Best_Model']['Model'] = model_selection_results.at[MAE.index[0], 'Model']
   pipeline['Model_Selection']['Best_Model']['Hyper_Params'] = model_selection_results.at[MAE.index[0],'Hyper_Params']
-  
+  pipeline['STEPS_COMPLETED']['Model_Selection'] = True
   
   print('Selected Model: ')
   print(model_selection_results.at[MAE.index[0], 'Model'])

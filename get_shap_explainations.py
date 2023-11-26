@@ -98,6 +98,7 @@ def main(pipeline, N_bins):
   pipeline['SHAP']['N_bins'] = N_bins
   pipeline['SHAP']['Mean_SHAP_Values'] = mean_shap
   pipeline['SHAP']['TSNE_Embedding'] = projections
+  pipeline['STEPS_COMPLETED']['SHAP'] = True
 
   print("\n\n--- %s minutes for SHAP explanation---" % ((time.time() - start_time)/60))
 

@@ -99,6 +99,11 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, ratiometric, data_file_path, si
         pickle.dump(pipeline_dict, file)
         print(f"\n\n--- SAVED New {cell} Pipeline CONFIG  ---")
     return pipeline_dict    
+def save_pipeline(pipeline, path, step):
+    c = pipeline['Cell']
+    with open(path , 'wb') as file:
+            pickle.dump(pipeline, file)
+    print(f"\n--- SAVED PIPELINE: {step} CONFIG AND RESULTS for {c}  ---")
 
 def extract_training_data(pipeline):
     #Assign variables based on dictionary
@@ -146,7 +151,7 @@ def extract_training_data(pipeline):
     pipeline['Data_preprocessing']['y'] = Y
     pipeline['Data_preprocessing']['all_proc_data'] = processed_data
     pipeline['Data_preprocessing']['raw_data'] = raw_data
-
+    pipeline['STEPS_COMPLETED']['Preprocessing'] = True
 
     return pipeline, X,Y, processed_data
 
