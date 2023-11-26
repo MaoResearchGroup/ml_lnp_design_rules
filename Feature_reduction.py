@@ -259,17 +259,17 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
             pear_list.append(np.mean(pearson_results)) # append average MAE value to empty list
             pear_std_list.append(np.std(pearson_results)) # append average MAE value to empty list
 
-        print('\n################################################################\n\nSTATUS REPORT:') 
-        print('Iteration '+str(iteration)+' of '+str(len(ordered_feature_removal_list))+' completed') 
-        print('No_Tested_Features:', len(tested_features))
-        print('Test_Score: %.3f' % (np.mean(acc_results)))
-        print('Spearman_Score: %.3f' % (np.mean(spearman_results)))
-        print('Pearson_Score: %.3f' % (np.mean(pearson_results)))
-        print('No_Best_features:', best_results[0])      
-        print('Best_Features:', best_results[1])
-        print('Currently removed features', best_results[2])
+        # print('\n##############################\n\nSTATUS REPORT:') 
+        # print('Iteration '+str(iteration)+' of '+str(len(ordered_feature_removal_list))+' completed') 
+        # print('No_Tested_Features:', len(tested_features))
+        # print('Test_Score: %.3f' % (np.mean(acc_results)))
+        # print('Spearman_Score: %.3f' % (np.mean(spearman_results)))
+        # print('Pearson_Score: %.3f' % (np.mean(pearson_results)))
+        # print('No_Best_features:', best_results[0])      
+        # print('Best_Features:', best_results[1])
+        # print('Currently removed features', best_results[2])
                 
-        print("\n################################################################\n ")
+        # print("\n#############################\n ")
 
     print('\nFINAL RETAINED FEATURES', best_results[1])
     print('\nFINAL REMOVED FEATURES', best_results[2])
@@ -304,6 +304,9 @@ def evaluate_model(X,Y, selected_features, model, N_CV):
     acc_list = []
     spearman_list = []
     pearson_list = []
+
+    model # assign selected model to clf_sel
+
     #Kfold CV
     for i in range(5): #For loop that splits and evaluates the data ten times
         cv_outer = KFold(n_splits=N_CV, random_state= i+100, shuffle=True)
@@ -320,10 +323,8 @@ def evaluate_model(X,Y, selected_features, model, N_CV):
             X_train_sel = X_train.iloc[:,selected_features] # select input features from training dataset based on Ward's Linkage value
             X_test_sel = X_test.iloc[:,selected_features] # select input features from test dataset based on Ward's Linkage value
                     
-
-            clf_sel = model # assign selected model to clf_sel
-            clf_sel.fit(X_train_sel, np.ravel(y_train)) # fit the selected model with the training set
-            y_pred = clf_sel.predict(X_test_sel) # predict test set based on selected input features
+            model.fit(X_train_sel, np.ravel(y_train)) # fit the selected model with the training set
+            y_pred = model.predict(X_test_sel) # predict test set based on selected input features
 
             # Get Model Statistics
             acc = round(mean_absolute_error(y_pred, y_test), 3)
@@ -335,99 +336,7 @@ def evaluate_model(X,Y, selected_features, model, N_CV):
             spearman_list.append(spearman) 
             pearson_list.append(pearson) 
 
-    return acc_list, spearman_list, pearson_list, clf_sel
-
-#define a function called plot_feature_reduction 
-def plot_feature_reduction(stats_df, cell_type, model_name, save):
-
-    #Adjust MAE into percent error
-    stats_df['Error'] = stats_df['MAE']*100
-    stats_df['Error_std'] = stats_df['MAE_std']*100
-
-
-    plt.rcParams['font.family'] = 'Arial'
-    plt.rcParams['font.size'] = 12
-
-    # Create a figure with two y-axes
-    fig, ax1 = plt.subplots(figsize=(2, 1.5), facecolor='white')
-    # Adjust font size and style
-
-
-    ax2 = ax1.twinx()
-
-    # Plot the points with error bars for Average MAE
-    m_size = 5
-    lw = 3
-    cap = 2
-    palette = sns.husl_palette()
-    ax1.errorbar(stats_df['# of Features'], stats_df['Error'], yerr=stats_df['Error_std'], fmt='o',markersize = m_size, color='black',
-                ecolor='darkgray', elinewidth=lw, capsize=cap, capthick=cap, alpha = 0.6)
-
-    # Draw a line connecting the points for Average MAE
-    ax1.plot(stats_df['# of Features'], stats_df['Error'], color=palette[0], alpha = 0.8, label='Error', linewidth=lw)
-
-    # Plot error bars for Spearman correlation coefficient
-    ax2.errorbar(stats_df['# of Features'], stats_df['Spearman'], yerr=stats_df['Spearman_std'], fmt='v', markersize = m_size, color='black',
-                ecolor='darkgray', elinewidth=lw, capsize=cap, capthick=cap, alpha = 0.6)
-
-    # Draw a line connecting the points for Spearman correlation coefficient
-    ax2.plot(stats_df['# of Features'], stats_df['Spearman'], color=palette[2], alpha = 0.8, label='Spearman', linewidth=lw)
-
-    # Plot error bars for Pearson correlation coefficient
-    ax2.errorbar(stats_df['# of Features'], stats_df['Pearson'], yerr=stats_df['Pearson_std'], fmt='^', markersize = m_size, color='black',
-                ecolor='darkgray', elinewidth=lw, capsize=cap, capthick=cap, alpha = 0.6)
-
-    # Draw a line connecting the points for Pearson correlation coefficient
-    ax2.plot(stats_df['# of Features'], stats_df['Pearson'], color=palette[4], alpha = 0.8,label='Pearson', linewidth=lw)
-
-
-    # Set labels for the x-axis and y-axes
-    label_size = 12
-
-    ax1.set_xlabel('Number of Remaining Features',fontfamily='arial',fontsize = label_size)
-    ax1.set_ylabel('Percent Error', fontfamily='arial',fontsize = label_size)
-    ax2.set_ylabel('Correlation', fontfamily='arial',fontsize = label_size)
-    # ax1.set_title("Feature Reduction", weight="bold", fontsize=15)
-    # Reverse the x-axis
-    ax1.invert_xaxis()
-
-    # Set labels on x and y axis
-    ax1.set_xticks(np.arange(int(stats_df['# of Features'].min()), int(stats_df['# of Features'].max()) + 1, 2))
-    ax1.set_yticks(np.arange(0, 20, 5))
-    ax1.set_yticklabels(ax1.get_yticklabels(), fontsize=label_size)
-    ax1.set_xticklabels(ax1.get_yticklabels(), fontsize=label_size)
-
-    # Set right axis y limits
-    ax2.set_yticks(np.linspace(0.5, 1, 3))
-    ax2.tick_params(axis = 'y', labelsize=label_size)
-
-
-    # Combine the legends from both axes
-    lines1, labels1 = ax1.get_legend_handles_labels()
-    lines2, labels2 = ax2.get_legend_handles_labels()
-    lines = lines1 + lines2
-    labels = labels1 + labels2
-    ax1.spines['left'].set_color('black')
-    ax1.spines['bottom'].set_color('black')        # x-axis and y-axis spines
-    ax1.spines['right'].set_color('black')
-    ax1.spines['top'].set_color('black')
-
-
-    # Update the legend titles
-    ax1.legend(lines, ['MAE', 'Spearman', 'Pearson'],
-            fontsize = 'small', 
-            loc='lower left', 
-            bbox_to_anchor= (-0.35 , 1.00),
-            ncol = 3,
-            columnspacing=1, 
-            handletextpad=0.2,
-            framealpha = 0)
-
-    
-    # Save the plot as a high-resolution image (e.g., PNG or PDF)
-    plt.savefig(save + f'{cell_type}/{cell_type}_{model_name}_Feature_Reduction_Plot.svg', dpi=600, transparent = True, bbox_inches='tight')
-
-    plt.close()
+    return acc_list, spearman_list, pearson_list, model
 
 
 def main(pipeline):

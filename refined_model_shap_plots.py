@@ -161,10 +161,6 @@ def SHAP_cluster(projections, color_values, cmap, size, title, figure_save_path,
 
 
 
-
-
-
-
 def main(cell_model_list, model_folder, shap_value_path, plot_save_path):
   for cell_model in cell_model_list:
       c = cell_model[0]
@@ -240,5 +236,6 @@ def main(cell_model_list, model_folder, shap_value_path, plot_save_path):
     # # ('Dlin-MC3_Helper lipid_ratio', 'cLogP'),
     # # shap_inter_values_list[0], train_data,
     # # display_features=train_data)
+
 if __name__ == "__main__":
     main()

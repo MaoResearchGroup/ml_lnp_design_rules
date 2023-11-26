@@ -5,21 +5,36 @@ import os
 def main():
 
         #Specify which plots to make
+        prelim                 = False
         plot_f_distribution    = True
-        plot_model_selection   = True
+        plot_model_selection   = False
         feature_reduction      = False
         run_learning_curve     = False
         run_SHAP_plots         = False
-        plot_SHAP_cluster      = False #Fuse
-        plot_Rose              = False #Fuse
-        plot_bump              = False #Fuse
+        plot_bump              = False 
 
 
+        RUN_NAME  = f"Runs/Final_PDI1_RLU2/"
 
-        file_path  = f"Runs/Test_PDI1_keep_Zeta_RLU2/"
-        cell_type_list = ['HepG2', 'HEK293', 'N2a', 'ARPE19','B16', 'PC3']
-        manuscript_save_path = file_path + 'Manuscript_Figures/'
-        if not os.path.exists( manuscript_save_path):
+
+        cell_type_list = ['HepG2', 'PC3', 'HEK293', 'B16',  'N2a', 'ARPE19']
+
+        feature_plotting_order = ['Dlin-MC3+Helper lipid percentage',
+                                'Dlin-MC3_Helper lipid_ratio',
+                                'Chol_DMG-PEG_ratio',
+                                'NP_ratio',
+                                'P_charged_centers', 
+                                'N_charged_centers', 
+                                'cLogP', 
+                                'Hbond_D', 
+                                'Hbond_A', 
+                                'Total_Carbon_Tails', 
+                                'Double_bonds',
+                                'Size', 
+                                'PDI', 
+                                'Zeta']
+        manuscript_save_path = RUN_NAME + 'Manuscript_Figures/'
+        if not os.path.exists(manuscript_save_path):
                 # Create the directory if it doesn't exist
                 os.makedirs( manuscript_save_path)
                 print(f"Directory '{manuscript_save_path}' created.")
@@ -31,76 +46,64 @@ def main():
         pipe_list = []
         for c in cell_type_list:
                 #Import Pipeline of interest
-                with open(file_path + f'{c}/Pipeline_dict.pkl', 'rb') as file:
+                with open(RUN_NAME + f'{c}/Pipeline_dict.pkl', 'rb') as file:
                         pipeline_results = pickle.load(file)
                 pipe_list.append(pipeline_results)
+        
+        #Comparison of Transfection
         if plot_f_distribution:
                 plotter.plot_tfxn_dist_comp(pipeline_list = pipe_list,
                                                 raw = True,
-                                                save_path= manuscript_save_path)
+                                                save= manuscript_save_path)
                 plotter.tfxn_heatmap(pipeline_list=pipe_list,
-                                     save_path=manuscript_save_path)
+                                     save=manuscript_save_path)
+        #Comparison of cell-cell model MAE
         if plot_model_selection:
                 plotter.plot_cell_comparision(pipeline_list = pipe_list,
-                                              save_path = manuscript_save_path)
+                                              save= manuscript_save_path)
         
+        #Design Feature Bump Plots
+        if plot_bump:
+                plotter.bumpplot(pipeline_list = pipe_list,
+                                 lw = 3,
+                                 feature_order= feature_plotting_order,
+                                 save= manuscript_save_path)
         
         
         ##### CELL TYPE SPECIFIC FIGURES ###########
         for c in cell_type_list:
-                
+                print(f'\n\n ############# Plotting for {c} ##############')
                 #Import Pipeline of interest
-                with open(file_path + f'{c}/Pipeline_dict.pkl', 'rb') as file:
+                with open(RUN_NAME + f'{c}/Pipeline_dict.pkl', 'rb') as file:
                         pipeline_results = pickle.load(file)
 
                 RUN_NAME = pipeline_results['Saving']['RUN_NAME']
                 pipeline_path             = f'{RUN_NAME}{c}/Pipeline_dict.pkl'
 
-                # if run_SHAP_plots:
-                #         print('\n###########################\n\n PLOTTING SHAP')
-                #         refined_model_shap_plots.main(cell_model_list=best_cell_model, 
-                #                         model_folder = refined_model_save_path, 
-                #                         shap_value_path = shap_value_save_path, 
-                #                         plot_save_path = shap_plot_save_path)
+                #Prelimary Dataset
+                if prelim:
+                        prelim_save = pipeline_results['Saving']['Figures'] + 'Prelim/'
+                        #Check save path
+                        if os.path.exists(prelim_save) == False:
+                                os.makedirs(prelim_save, 0o666)
 
-                # if plot_SHAP_cluster:
-                #         print('\n###########################\n\n PLOTTING SHAP CLUSTER PLOT')
-                #         SHAP_clustering.main(cell_model_list=best_cell_model,
-                #                 shap_value_path=shap_value_save_path, 
-                #                 model_save_path=refined_model_save_path,
-                #                 figure_save_path=shap_cluster_save_path)
-                # if plot_Rose:
-                #         print('\n###########################\n\n PLOTTING ROSE PLOT')
-                #         SHAP_radar_plot.main(cell_model_list=best_cell_model, 
-                #                 model_folder=refined_model_save_path, 
-                #                 shap_value_path=shap_value_save_path, 
-                #                 figure_save_path=radar_plot_save_path, 
-                #                 N_bins = 10, 
-                #                 comp_features = ['NP_ratio', 
-                #                                         'Dlin-MC3_Helper lipid_ratio',
-                #                                         'Dlin-MC3+Helper lipid percentage', 
-                #                                         'Chol_DMG-PEG_ratio'],
-                #                 lipid_features = ['P_charged_centers', 
-                #                                         'N_charged_centers', 
-                #                                         'Double_bonds'],
-                #                 phys_features= ['Zeta'])
-                # if plot_bump:
-                #         print('\n###########################\n\n PLOTTING BUMP PLOT')
-                #         bump_plot.main(cell_model_list=best_cell_model,
-                #                 model_folder=refined_model_save_path,
-                #                 shap_value_path=shap_value_save_path,
-                #                 plot_save_path= bump_plot_save_path,
-                #                 N_bins=10,
-                #                 feature_order=input_param_names)
 
-                # ##################### PLOTTING #####################################
-
-                        
+                        plotter.tfxn_dist(pipeline = pipeline_results,
+                                          raw = True,
+                                          save = prelim_save)
+                        plotter.feature_distribution(pipeline = pipeline_results,
+                                             save = prelim_save)        
                 #Plotting Model Selection Results
                 if plot_model_selection:
-                        print('\n###########################\n\n MODEL SELECTION PLOTTING')
-                        plotter.plot_AE_Box(pipeline_results)
-                        plotter.plot_predictions(pipeline_results)
+                        print('\n########## MODEL SELECTION PLOTTING')
+                        model_selection_save = pipeline_results['Saving']['Figures'] + 'Model_Selection/'
+                        #Check save path
+                        if os.path.exists(model_selection_save) == False:
+                                os.makedirs(model_selection_save, 0o666)
+                        
+
+                        plotter.plot_AE_Box(pipeline_results, model_selection_save)
+                        plotter.plot_predictions(pipeline_results, model_selection_save)
 
                 #Plot Feature Reduction
                 if feature_reduction:
@@ -118,5 +121,70 @@ def main():
                                 print(f"\n\n--- Updated Pipeline with Learning Curve {c} CONFIG AND RESULTS ---")
 
                         plotter.plot_learning_curve(pipeline_results)
+                #SHAP Plots
+                if run_SHAP_plots:
+                        SHAP_save = pipeline_results['Saving']['Figures'] + 'SHAP/'
+                        #Check save path
+                        if os.path.exists(SHAP_save) == False:
+                                os.makedirs(SHAP_save, 0o666)
+
+                        #Beeswarm Summary Plot
+                        plotter.plot_summary(pipeline = pipeline_results,
+                                             cmap = 'viridis_r',
+                                             feature_order=True,
+                                             save = SHAP_save,
+                                             order = feature_plotting_order)
+                
+                        #Feature Importance
+                        plotter.plot_importance(pipeline = pipeline_results,
+                                                feature_order=True,
+                                                order = feature_plotting_order,
+                                                save = SHAP_save)
+                        
+                        #Embedded Colored by Feature Value
+                        #Transfection
+                        plotter.plot_SHAP_cluster(pipeline = pipeline_results,
+                                             feature_name='Transfection Efficiency',
+                                             cmap = 'Reds',
+                                             size = 3.5,
+                                             save = SHAP_save,
+                                             title = False)
+                        #Formulation Features
+                        for f in ['NP_ratio',
+                                   'Chol_DMG-PEG_ratio',
+                                   'Dlin-MC3+Helper lipid percentage',
+                                   'Dlin-MC3_Helper lipid_ratio' ]: 
+                                plotter.plot_SHAP_cluster(pipeline = pipeline_results,
+                                                feature_name=f,
+                                                cmap = 'viridis_r',
+                                                size = 2,
+                                                save = SHAP_save,
+                                                title = False)
+                        
+                                #Embedded Colored by SHAP Value
+                                plotter.plot_embedded(pipeline=pipeline_results, 
+                                                feature_name= f,
+                                                save = SHAP_save)
+
+                        #Plot dependence
+                        plotter.plot_dependence(pipeline=pipeline_results,
+                                                feature_name = 'Dlin-MC3_Helper lipid_ratio',
+                                                interaction_feature= 'P_charged_centers',
+                                                save = SHAP_save)
+                        #Plot Interaction
+                        plotter.plot_interaction(pipeline = pipeline_results,
+                                                 cmap = 'viridis_r',
+                                                 save = SHAP_save)
+                        
+                        #Radar/Rose Plots
+                        plotter.plot_Radar(pipeline= pipeline_results,
+                                           save = SHAP_save)
+                        plotter.plot_Rose(pipeline= pipeline_results,
+                                          save = SHAP_save)
+                        
+                        # #Plot Force Plot (Not used for manuscript)
+                        # plotter.plot_force(formulation = 1,
+                        #                    pipeline = pipeline_results)
+
 if __name__ == "__main__":
     main()

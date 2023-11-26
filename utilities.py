@@ -76,8 +76,13 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, ratiometric, data_file_path, si
                         'X': None,
                         'y': None,
                         'Input_Params': None,
+                        'Explainer' : None,
                         'SHAP_Values': None,
-                        'SHAP_Interaction_Values': None
+                        'Best_Feature_Values': None,
+                        'Mean_SHAP_Values': None,
+                        'N_bins': None,
+                        'SHAP_Interaction_Values': None,
+                        'TSNE_Embedding' : None
                         }
                     }
   
@@ -157,7 +162,13 @@ def select_input_params(cell, ratio = True):
         formulation_param_names = ['wt_Helper', 'wt_Dlin',
                         'wt_Chol', 'wt_DMG', 'wt_pDNA'] 
     
-    lipid_param_names = ['P_charged_centers', 'N_charged_centers', 'cLogP', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds']
+    lipid_param_names = ['P_charged_centers', 
+                         'N_charged_centers', 
+                         'cLogP', 
+                         'Hbond_D', 
+                         'Hbond_A', 
+                         'Total_Carbon_Tails', 
+                         'Double_bonds']
 
     NP_level_params = ['Size', 'PDI', 'Zeta']
     
@@ -266,9 +277,9 @@ def get_mean_shap(c, input_params, shap_values, N_bins = 10):
         min = mean_storage.loc[mean_storage['Feature'] == f, 'Feature_Value'].min()
         max = mean_storage.loc[mean_storage['Feature'] == f, 'Feature_Value'].max()
         normalized_value = (best_feature_value - min)/(max-min)
-        best_feature_values.append((f, normalized_value))
+        best_feature_values.append((f, best_feature_value, normalized_value))
 
-    df_best_feature_values = pd.DataFrame(best_feature_values, columns = ["Feature", f"{c}_Norm_Feature_Value"])
+    df_best_feature_values = pd.DataFrame(best_feature_values, columns = ["Feature", f"{c}_Feature_Value", f"{c}_Norm_Feature_Value"])
 
     return df_best_feature_values, mean_storage
 
