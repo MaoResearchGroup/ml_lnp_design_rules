@@ -20,7 +20,7 @@ def main():
         RUN_NAME  = f"Runs/Final_PDI1_RLU2/"
 
 
-        cell_type_list = ['HepG2', 'PC3', 'HEK293', 'B16',  'N2a', 'ARPE19']
+        cell_type_list = ['B16', 'HepG2', 'PC3', 'HEK293',  'N2a', 'ARPE19']
 
         feature_plotting_order = ['Dlin-MC3+Helper lipid percentage',
                                 'Dlin-MC3_Helper lipid_ratio',

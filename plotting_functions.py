@@ -1234,10 +1234,11 @@ def bumpplot(pipeline_list, lw, save, feature_order = None):
     
     combined_norm_best_values = pd.DataFrame()
     combined_best_values = pd.DataFrame()
-    
+    cell_names = []
     #Extracting Data
     for pipe in pipeline_list:
         cell = pipe['Cell']
+        cell_names.append(cell)
         norm_best_values = pipe['SHAP']['Best_Feature_Values'].loc[:, ['Feature', f'{cell}_Norm_Feature_Value']]
         best_values      = pipe['SHAP']['Best_Feature_Values'].loc[:, ['Feature', f'{cell}_Feature_Value']]
         if combined_norm_best_values.empty:
@@ -1293,11 +1294,10 @@ def bumpplot(pipeline_list, lw, save, feature_order = None):
     feature_names = sorted_df['Feature'].unique()
     plt.yticks(sorted_df.Features, feature_names,rotation=45, ha='right', fontsize = 12)
 
-    #Cell Names
-    cell_names = sorted_df.columns[1:]
 
-    #removing extra characters
-    cell_names = [cell.replace('_Norm_Feature_Value', '') for cell in cell_names]
+    #Add Feature column to cell names
+    cell_names.insert(0,'Feature')
+
 
     plt.xticks(np.arange(len(cell_names)), cell_names, fontsize = 12)
 
