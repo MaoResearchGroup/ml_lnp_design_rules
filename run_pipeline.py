@@ -14,9 +14,9 @@ def main():
   
   #Parts to Run/Update
   run_preprocessing     = True
-  run_model_selection   = True
-  run_feature_reduction = True
-  run_SHAP_explain      = True
+  run_model_selection   = False
+  run_feature_reduction = False
+  run_SHAP_explain      = False
   
   #Cell types to Run
   cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']

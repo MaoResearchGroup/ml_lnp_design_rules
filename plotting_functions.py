@@ -365,17 +365,24 @@ def plot_AE_Box(pipeline, save):
     plt.close()
 
 
-def plot_predictions(pipeline, save):
+def plot_predictions(pipeline, save, pred = None, exp = None):
     
     ######### Hold Out Validation Pred vs Exp. Plots ########
     cell = pipeline['Cell']
     model_name = pipeline['Model_Selection']['Best_Model']['Model_Name']
     data = pipeline['Model_Selection']['Best_Model']['Predictions']
 
-    #Get Predictions
-    experimental = data['Experimental_Transfection']
-    predicted = data['Predicted_Transfection']
-
+    if pred is None and exp is None:
+        #Get Predictions
+        experimental = data['Experimental_Transfection']
+        predicted = data['Predicted_Transfection']
+        lower_lim = -0.05
+        upper_lim = 1.05
+    else:
+        experimental = exp
+        predicted = pred
+        lower_lim = -0.05
+        upper_lim = 1.15
     #Calculate correlations
     pearsons = stats.pearsonr(predicted, experimental)
     spearman = stats.spearmanr(predicted, experimental)
@@ -404,7 +411,7 @@ def plot_predictions(pipeline, save):
     #Labels
     plt.ylabel('Predicted Transfection', fontsize = 12)
     plt.xlabel('Experimental Transfection',fontsize = 12)
-    reg.set(xlim=(-0.05, 1.05), xticks=np.linspace(0,1,5), ylim=(-0.05, 1.05), yticks=np.linspace(0,1,5))
+    reg.set(xlim=(lower_lim, upper_lim), xticks=np.linspace(0,1,5), ylim=(lower_lim, upper_lim), yticks=np.linspace(0,1,5))
     
     #Ticks
     reg.tick_params(colors='black', which='both')
@@ -425,6 +432,8 @@ def plot_predictions(pipeline, save):
     plt.grid(False)
     plt.savefig(save + f'{model_name}_{cell}_predictions.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
     plt.close()
+
+
 def tabulate_refined_model_results(pipeline_list, cell_type_list, save):
     
     df_best_cell_model = pd.DataFrame(index = ['Model_Name','MAE', 'Spearman', 'Pearson'], columns = cell_type_list)

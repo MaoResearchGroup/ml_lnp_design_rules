@@ -44,6 +44,7 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, ratiometric, data_file_path, si
                         'PDI_cutoff': PDI_cutoff,
                         'prefix' : prefix,
                         'RLU_floor':RLU_floor, 
+                        'Scaler': None,
                         'X' : None, 
                         'y': None, 
                         'all_proc_data' : None,
@@ -147,6 +148,7 @@ def extract_training_data(pipeline):
     Y = pd.DataFrame(temp_Y, columns = ["NORM_" + prefix + cell_type])
 
     #Update Pipeline dictionary
+    pipeline['Data_preprocessing']['Scaler'] = scaler
     pipeline['Data_preprocessing']['X'] = X
     pipeline['Data_preprocessing']['y'] = Y
     pipeline['Data_preprocessing']['all_proc_data'] = processed_data
