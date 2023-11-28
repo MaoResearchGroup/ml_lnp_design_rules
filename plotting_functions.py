@@ -6,7 +6,7 @@ import plotly.express as px
 import os
 import matplotlib.pyplot as plt
 from matplotlib import colors
-from utilities import get_spearman, extract_training_data, run_tukey
+from utilities import get_spearman, extract_training_data, run_tukey, extraction_all
 from sklearn.decomposition import PCA
 from sklearn.model_selection import KFold
 import copy
@@ -14,22 +14,26 @@ from sklearn.model_selection import learning_curve
 import time
 import shap
 import pickle
+from itertools import chain
 
 
 ########## INITIAL FEATURE ANALYSIS PLOTS ##################
-def tfxn_heatmap(pipeline_list, save):
+def tfxn_heatmap(pipeline_list, save, helper_lipid = False):
     plt.rcParams["font.family"] = "Arial"
     plt.rcParams['font.size'] = 12
     sns.set(font='Arial')
 
     cell_type_list = []
     cell_tfxn_list = []
+    HL_list        = [] #Only used if helper lipid is true
     for pipe in pipeline_list:
         prefix = pipe['Data_preprocessing']['prefix']
         cell_type_list.append(pipe['Cell'])
         cell_tfxn_list.append(pipe['Data_preprocessing']['all_proc_data'][prefix + pipe['Cell']])
+        
+
     training_data = pd.concat(cell_tfxn_list, axis = 1)
-    
+
 
     #Initiate a correlation matrix of zeros
     all_corr = pd.DataFrame(np.zeros((len(cell_type_list),len(cell_type_list))), index = cell_type_list, columns = cell_type_list)
@@ -53,31 +57,41 @@ def tfxn_heatmap(pipeline_list, save):
     plt.gca()
     plt.savefig(save + 'All_Data_Tfxn_Heatmap.svg', dpi=600, format = 'svg', transparent=True, bbox_inches='tight')
     plt.close()           
-
-
-    #### PLOTTING THE HEATMAP FOR LIPID SPECIFIC FORMULATIONS ACROSS CELL TYPES        
-    # #Iterate through subsets based on helper lipid used in formulations
-    # print(training_data["Helper_lipid"].unique())
-    # for lipid in training_data["Helper_lipid"].unique():
-    #     lipid_data = training_data.loc[training_data["Helper_lipid"] == lipid]
-    #     for cell1 in cell_type_list:
-    #         for cell2 in cell_type_list:
-    #             lipid_corr.loc[cell1, cell2] = get_spearman(lipid_data, cell1, cell2)
-  
-            
-    #     sns.heatmap(lipid_corr,vmin=-0.2, vmax=1, annot = True)
-    #     plt.gca()
-    #     plt.title(lipid)
-    #     plt.savefig(save + f'{lipid}_Heatmap.svg', dpi=600, format = 'svg', transparent=True, bbox_inches='tight')
-    #     plt.close()      
-    #     # Save the all correlation data to csv
-    #     with open(save + f'{lipid}_tfxn_correlation.csv', 'w', encoding = 'utf-8-sig') as file:
-    #         lipid_corr.to_csv(file)
-
-
+    
     # Save the all correlation data to csv
     with open(save + 'All_tfxn_correlation.csv', 'w', encoding = 'utf-8-sig') as file:
-          all_corr.to_csv(file)
+        all_corr.to_csv(file)
+
+    ### PLOTTING THE HEATMAP FOR LIPID SPECIFIC FORMULATIONS ACROSS CELL TYPES   
+
+    if helper_lipid:
+        for pipe in pipeline_list:
+            HL = pipe['Data_preprocessing']['all_proc_data']['Helper_lipid'].copy()
+            HL = HL.rename(pipe['Cell'])
+            HL_list.append(HL)
+
+        HL_array = pd.concat(HL_list, axis = 1)
+
+        #Iterate through subsets based on helper lipid used in formulations
+        for lipid in HL_array.stack().unique():
+            boolean_array = (HL_array == lipid).any(axis=1)
+            lipid_data = training_data[boolean_array]
+            for cell1 in cell_type_list:
+                for cell2 in cell_type_list:
+                    lipid_corr.loc[cell1, cell2] = get_spearman(lipid_data, cell1, cell2)
+    
+            fig, ax = plt.subplots(1,1,figsize=(3,3))    
+            sns.heatmap(round(np.abs(lipid_corr),2),vmin=-0.2, vmax=1,cmap='Blues', annot = True, annot_kws={"size": 6})
+            plt.gca()
+            plt.title(lipid)
+            plt.savefig(save + f'{lipid}_tfxn_Heatmap.svg', dpi=600, format = 'svg', transparent=True, bbox_inches='tight')
+            plt.close()      
+            # Save the all correlation data to csv
+            with open(save + f'{lipid}_tfxn_correlation.csv', 'w', encoding = 'utf-8-sig') as file:
+                lipid_corr.to_csv(file)
+
+
+
 
 def plot_tfxn_dist_comp(pipeline_list, raw, save):
 
@@ -292,7 +306,7 @@ def plot_AE_Box(pipeline, save):
     #palette = sns.color_palette("Paired")
     #palette = sns.color_palette("pastel")
     #palette = sns.color_palette("tab10")
-    palette = sns.color_palette("hls", 8, as_cmap=False)
+    palette = sns.color_palette("husl", 8, as_cmap=False)
 
     # set boxplot style
     boxplot = sns.set_style("white")
@@ -322,7 +336,7 @@ def plot_AE_Box(pipeline, save):
     #boxplot.set_xlabel("Model index", fontsize=12)
     boxplot.set_ylabel("Percent Error", font = "Arial", fontsize=12, color='black')
     
-    boxplot.set(ylim=(-2, 1), yticks=np.arange(0,120,20))
+    boxplot.set(ylim=(-2, 105), yticks=np.arange(0,120,20))
 
     # x-axis rotation and text color
     boxplot.set_xticklabels(boxplot.get_xticklabels(),rotation = 0, color='black', fontsize=12)
@@ -343,6 +357,7 @@ def plot_AE_Box(pipeline, save):
     # add tick marks on x-axis or y-axis
     boxplot.tick_params(bottom=False, left=True)
     boxplot.set_yticklabels(boxplot.get_yticklabels(), size = 12)
+    plt.grid(False)
     plt.tight_layout(rect=[0, 0.03, 1, 0.90])
 
 
@@ -403,10 +418,113 @@ def plot_predictions(pipeline, save):
     # plt.tick_params(axis='both', which='major', labelsize=10)
 
     reg.spines['left'].set_color('black')
-    reg.spines['bottom'].set_color('black')        # x-axis and y-axis tick color
+    reg.spines['bottom'].set_color('black')
+    reg.spines['right'].set_visible(False)
+    reg.spines['top'].set_visible(False)
 
+    plt.grid(False)
     plt.savefig(save + f'{model_name}_{cell}_predictions.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
     plt.close()
+def tabulate_refined_model_results(pipeline_list, cell_type_list, save):
+    
+    df_best_cell_model = pd.DataFrame(index = ['Model_Name','MAE', 'Spearman', 'Pearson'], columns = cell_type_list)
+    for pipe in pipeline_list:
+        df = pipe['Feature_Reduction']['Final_Results'].copy()
+        cell = pipe['Cell']
+        df_best_cell_model.at['Model_Name', cell] = pipe['Model_Selection']['Best_Model']['Model_Name']
+        df_best_cell_model.at['MAE',cell] = df.at[0,'MAE']
+        df_best_cell_model.at['Spearman', cell] =df.at[0,'Spearman']
+        df_best_cell_model.at['Pearson',cell] = df.at[0,'Pearson']
+
+    
+    with open(save + "Feature_Red_Overall_Best_Results.csv", 'w', encoding = 'utf-8-sig') as f:
+        df_best_cell_model.to_csv(f) 
+def plot_refined_model_comparisions(pipeline_list, save):
+    MAE_list = []
+    cell_list = []
+    error = pd.DataFrame(columns=['Cell', 'MAE', 'std'])
+    for pipe in pipeline_list:
+
+        df = pipe['Feature_Reduction']['Reduction_Results'].copy()
+        N_CV = pipe['Feature_Reduction']['N_CV']
+        predictions = np.array(df.iloc[-1, 9])
+        experimental = np.array(df.iloc[-1, 10])
+
+        #Calculate MAE for each repeat
+        AE = abs(predictions-experimental)
+        MAE = np.mean(AE, axis=1)
+        MAE_list.append(MAE)
+        cell_list.append(pipe['Cell'])
+    
+    #Convert to df
+    error = pd.DataFrame(MAE_list, index = cell_list, columns=range(N_CV))
+
+    # Calculate row-wise averages excluding the 'Category' column
+    row_averages = np.mean(error, axis=1)
+
+    # Get the sorted indices based on row averages
+    sorted_ind = np.argsort(row_averages)
+    sorted = error.index[sorted_ind].to_list()
+
+    #convert to percent error
+    error = error*100
+
+    #convert to long form for plotting
+    error_long = error.reset_index().melt(id_vars='index', var_name='columns', value_name='MAE')
+    
+    
+    plt.rcParams['font.family'] = 'Arial'
+    plt.rcParams['font.size'] = 12
+
+    fig = plt.subplots(1,1, figsize=(2.5,1.5))
+    sns.set_theme(font='Arial', font_scale= 1)
+    palette = sns.color_palette("Set2", 6, as_cmap=False)
+    fontsize = 12
+
+    bar = sns.barplot(
+        data=error_long, x="index", y="MAE",
+        palette= palette, order = sorted,
+        alpha = 0.8,
+        dodge=False,
+        errorbar='sd', capsize = 0.5,
+        errwidth=1.5)
+    # Add borders to bars
+    for patch in bar.patches:
+        patch.set_edgecolor('black')
+        patch.set_linewidth(1)
+    sns.stripplot(
+        data=error_long, x="index", y="MAE", color = 'black',
+        dodge=True, alpha=0.8,
+        marker = 'o', 
+        edgecolor='black',
+        linewidth=1,
+        facecolor='none',
+        legend=False,
+        order = sorted,
+        size = 4
+        )
+    plt.ylim(0,10)
+    plt.gca().set_xlabel('')
+    plt.legend().set_visible(False)
+    plt.ylabel('Percent Error', font = "Arial", fontsize=fontsize, color = 'black')
+    # add tick marks on x-axis or y-axis
+    bar.tick_params(bottom=True, left=True)
+    # x-axis and y-axis label color
+    bar.axes.yaxis.label.set_color('black')
+    bar.axes.xaxis.label.set_color('black')
+
+    bar.set_yticklabels(bar.get_yticklabels(), size = fontsize, color = 'black')
+    bar.set_xticklabels(bar.get_xticklabels(), size = fontsize, rotation = 45, ha='right', color = 'black')
+
+    bar.spines['left'].set_color('black')
+    bar.spines['bottom'].set_color('black')  
+    bar.spines['right'].set_visible(False)
+    bar.spines['top'].set_visible(False)      # x-axis and y-axis tick color
+
+    plt.grid(False)
+    plt.savefig(save + f'Cell_wise_Refined_model_Comparision.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
+    plt.close()
+
 
 def plot_cell_comparision(pipeline_list, save):
     #extract data
@@ -428,10 +546,22 @@ def plot_cell_comparision(pipeline_list, save):
     palette = sns.color_palette("Set2", 6, as_cmap=False)
     # sns.barplot(best_MAE)
 
-    ##### VIOLIN PLOT
     fontsize = 12
     # bar = sns.barplot(data = best_AE, errorbar = 'sd', palette=palette, capsize = 0.15,errwidth=0.5,saturation = 0.5)
-    bar = sns.boxplot(data = best_AE, palette=palette,saturation = 0.5, fliersize = 2)
+    bar = sns.boxplot(data = best_AE, 
+                      palette=palette, 
+                      saturation = 0.5, 
+                      fliersize = 2, 
+                      boxprops=dict(alpha=0.8),
+                      showmeans=True,
+                      meanprops=dict(marker="^", 
+                                     markerfacecolor="red", 
+                                     alpha=0.8,
+                                     markeredgecolor="black", 
+                                     markersize=4, 
+                                     linewidth=0.05, 
+                                     zorder=10))
+    
     plt.ylabel('Percent Error', font = "Arial", fontsize=fontsize)
     bar.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
     bar.set(ylim=(0, 60), yticks=np.arange(0,70,10))
@@ -447,75 +577,90 @@ def plot_cell_comparision(pipeline_list, save):
     # plt.tick_params(axis='both', which='major', labelsize=10)
 
     bar.spines['left'].set_color('black')
-    bar.spines['bottom'].set_color('black')        # x-axis and y-axis tick color
+    bar.spines['bottom'].set_color('black')  
+    bar.spines['right'].set_visible(False)
+    bar.spines['top'].set_visible(False)      # x-axis and y-axis tick color
     x_min, x_max = bar.get_xlim()
     #plot dotted line at o
+    plt.grid(False)
     plt.plot([x_min, x_max], [0,0], '--r')
     plt.savefig(save + f'Cell_wise_model_Comparision.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
     plt.close()
 
 def tabulate_model_selection_results(pipeline_list,save):
     ##########  Collect all Results ###############
-    all_results = pd.DataFrame(columns = ['Model', 'Cell_Type', 'Valid Score', 'Test Score','Spearmans Rank','Pearsons Correlation','Model Parms', 'Experimental_Transfection','Predicted_Transfection'])
 
     cell_type_list = []
     all_model_list = []
+    list_model_list = []
+    for pipe in pipeline_list:
+        cell_type_list.append(pipe['Cell'])
+        list_model_list.append(pipe['Model_Selection']['Model_list'])
+    
+    # Flatten the list of lists using chain
+    flattened_list = list(chain(*list_model_list))
+
+    # Get unique values using set
+    unique_values = set(flattened_list)
+
+    # Convert the set back to a list if needed
+    all_model_list = list(unique_values)
+
+    #initialize dataframes
+    df_MAE = pd.DataFrame(index = all_model_list, columns = cell_type_list)
+    df_spearman = pd.DataFrame(index = all_model_list, columns = cell_type_list)
+    df_pearson = pd.DataFrame(index = all_model_list, columns = cell_type_list)
+
+    df_best_cell_model = pd.DataFrame(index = ['Model_Name','MAE', 'Spearman', 'Pearson'], columns = cell_type_list)
+
     for pipe in pipeline_list:
         cell = pipe['Cell']
         model_list = pipe['Model_Selection']['Model_list']
-        cell_type_list.append(cell)
+        N_CV = pipe['Model_Selection']['N_CV']
+        model_path = pipe['Saving']['Models']
+
+        best_model_name = pipe['Model_Selection']['Best_Model']['Model_Name']
+
         for model_name in model_list:
-            if model_name not in all_model_list:
-                all_model_list.append(model_name)
             
-            result_file_path = pipe['Saving']['Models'] + f'{model_name}/HP_Tuning_Results.pkl'
+            #Combine the predictions and experimental transfection data into a single row
+            data = extraction_all(model_name, model_path, N_CV)
+            predicted    = data['Predicted_Transfection']
+            experimental = data['Experimental_Transfection']
+            AE           = data['Absolute_Error']
 
-            with open(result_file_path, 'rb') as file:
-                results = pickle.load(file)
-                results.drop(columns = ['Iter','Formulation_Index'], inplace = True)
+            #calculate
+            pearson = stats.pearsonr(predicted, experimental)[0]
+            spearman = stats.spearmanr(predicted, experimental)[0]
+            MAE = AE.mean()
 
-                #Combine the predictions and experimental transfection data into a single row
-                results = results.iloc[[0]] #keep only Best model, return dataframe type
-                results.insert(0, 'Model', model_name) #Add model
-                results.insert(1, 'Cell_Type', cell) #Add cell type
-                all_results = pd.concat([results, all_results.loc[:]], ignore_index = True).reset_index(drop = True)
-    
-    #Save results
-    if os.path.exists(save) == False:
-       os.makedirs(save, 0o666)
-    with open(save + "Model_Selection_Results.csv", 'w', encoding = 'utf-8-sig') as f:
-        all_results.to_csv(f)
-    
-    
-    
-    ########## Extract MAE, Spearman, Pearson for all models for all cell types##################
-    MAE_results = pd.DataFrame(index = model_list, columns = cell_type_list)
-    spearman_results = pd.DataFrame(index = model_list, columns = cell_type_list)
-    pearson_results = pd.DataFrame(index = model_list, columns = cell_type_list)
-    pred_transfection = pd.DataFrame(index = model_list, columns = cell_type_list)
-    exp_transfection = pd.DataFrame(index = model_list, columns = cell_type_list)
-    
-    for cell in cell_type_list:
-        for model in all_model_list:
-            m1 = all_results["Model"] == model
-            m2 = all_results["Cell_Type"] == cell
-            MAE_results.at[model, cell] = all_results[m1&m2]['Test Score'].values[0]
-            spearman_results.at[model, cell] = all_results[m1&m2]['Spearmans Rank'].values[0][0]
-            pearson_results.at[model, cell] = all_results[m1&m2]['Pearsons Correlation'].values[0][0]
-            pred_transfection.at[model, cell] = all_results[m1&m2]['Predicted_Transfection'].values[0]
-            exp_transfection.at[model, cell] = all_results[m1&m2]['Experimental_Transfection'].values[0].transpose()[0] #Format as list
+            #update DF
+            df_pearson.at[model_name, cell] = pearson
+            df_spearman.at[model_name, cell] = spearman
+            df_MAE.at[model_name, cell] = MAE
+
+            #Update best model table
+            if model_name == best_model_name:
+                df_best_cell_model.at['Model_Name', cell] = model_name
+                df_best_cell_model.at['MAE', cell] = MAE
+                df_best_cell_model.at['Spearman', cell] =spearman
+                df_best_cell_model.at['Pearson', cell] =pearson
     
     ########## Tabulate Results ##################
     with open(save + "Model_Selection_MAE.csv", 'w', encoding = 'utf-8-sig') as f:
-        MAE_results.to_csv(f)
+        df_MAE.to_csv(f)
     with open(save + "Model_Selection_spearman.csv", 'w', encoding = 'utf-8-sig') as f:
-        spearman_results.to_csv(f)
+        df_spearman.to_csv(f)
     with open(save + "Model_Selection_pearson.csv", 'w', encoding = 'utf-8-sig') as f:
-        pearson_results.to_csv(f)   
+        df_pearson.to_csv(f)   
+    with open(save + "Model_Selection_Overall_Best_Results.csv", 'w', encoding = 'utf-8-sig') as f:
+        df_best_cell_model.to_csv(f)   
     
     print('\nSaved All Model Selection Tables')
 
-    return all_results, MAE_results, spearman_results, pearson_results
+    return df_MAE, df_spearman, df_pearson
+
+
 ########## FEATURE REDUCTION PLOTS ##################
 def plot_feature_reduction(pipeline):
     
@@ -528,7 +673,6 @@ def plot_feature_reduction(pipeline):
     #Adjust MAE into percent error
     stats_df['Error'] = stats_df['MAE']*100
     stats_df['Error_std'] = stats_df['MAE_std']*100
-
 
     plt.rcParams['font.family'] = 'Arial'
     plt.rcParams['font.size'] = 12
@@ -569,9 +713,9 @@ def plot_feature_reduction(pipeline):
     # Set labels for the x-axis and y-axes
     label_size = 12
 
-    ax1.set_xlabel('Number of Remaining Features', fontsize = label_size)
-    ax1.set_ylabel('Percent Error', fontsize = label_size)
-    ax2.set_ylabel('Correlation', fontsize = label_size)
+    ax1.set_xlabel('Number of Remaining Features', fontsize = label_size, color = 'black')
+    ax1.set_ylabel('Percent Error', fontsize = label_size, color = 'black')
+    ax2.set_ylabel('Correlation', fontsize = label_size, color = 'black')
     # ax1.set_title("Feature Reduction", weight="bold", fontsize=15)
     # Reverse the x-axis
     ax1.invert_xaxis()
@@ -592,11 +736,11 @@ def plot_feature_reduction(pipeline):
     lines2, labels2 = ax2.get_legend_handles_labels()
     lines = lines1 + lines2
     labels = labels1 + labels2
-    ax1.spines['left'].set_color('black')
-    ax1.spines['bottom'].set_color('black')        # x-axis and y-axis spines
-    ax1.spines['right'].set_color('black')
-    ax1.spines['top'].set_color('black')
 
+    ax2.spines['left'].set_color('black')
+    ax2.spines['bottom'].set_color('black') 
+    ax2.spines['right'].set_color('black')
+    ax2.spines['top'].set_color('black')
 
     # Update the legend titles
     ax1.legend(lines, ['MAE', 'Spearman', 'Pearson'],
@@ -608,12 +752,12 @@ def plot_feature_reduction(pipeline):
             handletextpad=0.2,
             framealpha = 0)
 
+    plt.grid(visible=False)
     plt.savefig(save + f'{cell_type}_{model_name}_Feature_Reduction_Plot.svg', dpi=600, transparent = True, bbox_inches='tight')
-
     plt.close()
 
 ############ LEARNING CURVE ##################
-def get_learning_curve(pipeline, NUM_ITER =5, num_splits =5, num_sizes= 50):
+def get_learning_curve(pipeline, refined = False, NUM_ITER =5, num_splits =5, num_sizes= 50):
 
     start_time = time.time()
     #Initialize
@@ -626,9 +770,18 @@ def get_learning_curve(pipeline, NUM_ITER =5, num_splits =5, num_sizes= 50):
     #Config
     save_path = pipeline['Saving']['Figures']
     trained_model = pipeline['Model_Selection']['Best_Model']['Model']
+
+    #Whether to used feature refined dataset or not
+    if refined:
+        X = pipeline['Feature_Reduction']['Refined_X']
+        pipeline['Learning_Curve']['Dataset_Type']  = 'Refined'
+    else:
+        X = pipeline['Data_preprocessing']['X']
+        pipeline['Learning_Curve']['Dataset_Type']  = 'All'
+
+
     model_name = pipeline['Model_Selection']['Best_Model']['Model_Name']
     c = pipeline['Cell']
-    X = pipeline['Data_preprocessing']['X']
     Y = pipeline['Data_preprocessing']['y']
 
 
@@ -641,8 +794,8 @@ def get_learning_curve(pipeline, NUM_ITER =5, num_splits =5, num_sizes= 50):
     train_size = np.floor(train_size).astype(int)
     train_scores_mean = pd.DataFrame(index=train_size)
     validation_scores_mean = pd.DataFrame(index=train_size)
-    print(f"\n############ Calculating Learning Curve: {model_name}_{c}############ ")
     
+    print(f"\n############ Calculating Learning Curve: {model_name}_{c}############ ")
     #Train model and record performance
     for i in range(NUM_ITER):
         cross_val = KFold(n_splits= num_splits, random_state= i+10, shuffle=True)
@@ -651,7 +804,9 @@ def get_learning_curve(pipeline, NUM_ITER =5, num_splits =5, num_sizes= 50):
                                                                         y = np.ravel(Y), 
                                                                         cv = cross_val, 
                                                                         train_sizes= train_size,
-                                                                        scoring = 'neg_mean_absolute_error', shuffle= True, n_jobs= -1)
+                                                                        scoring = 'neg_mean_absolute_error', shuffle= True,
+                                                                        random_state = 42,
+                                                                        n_jobs= -1)
 
         train_scores_mean[i] = -train_scores.mean(axis = 1)
         validation_scores_mean[i] = -validation_scores.mean(axis = 1)
@@ -679,6 +834,7 @@ def get_learning_curve(pipeline, NUM_ITER =5, num_splits =5, num_sizes= 50):
         validation_scores_mean.to_csv(f)
 
     #Update Pipeline
+    pipeline['Learning_Curve']['Model_used']  = trained_model
     pipeline['Learning_Curve']['Train_Error'] = train_scores_mean
     pipeline['Learning_Curve']['Valid_Error'] = validation_scores_mean
     pipeline['STEPS_COMPLETED']['Learning_Curve'] = True
@@ -703,7 +859,7 @@ def plot_learning_curve(pipeline):
     plt.rcParams['font.family'] = 'Arial'
     plt.rcParams['font.size'] = 8
 
-    fig, ax = plt.subplots(figsize = (2.5,1.5))
+    fig, ax = plt.subplots(figsize = (2.5,2.5))
     sns.set_theme(font='Arial', font_scale= 1)
 
     
@@ -715,7 +871,7 @@ def plot_learning_curve(pipeline):
                             linewidth = 3, 
                             palette=sns.color_palette("Set2" , 2))
 
-    line.set(xlim=(0, 900), xticks=np.linspace(0,900,6), ylim=(0, 15), yticks=np.arange(0,20,5))
+    line.set(xlim=(0, 900), xticks=np.linspace(0,900,6), ylim=(0, 20), yticks=np.arange(0,25,5))
     line.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
     # add tick marks on x-axis or y-axis
     line.tick_params(bottom=True, left=True)
@@ -735,7 +891,7 @@ def plot_learning_curve(pipeline):
 
     line.tick_params(colors='black', which='both')  # 'both' refers to minor and major axes
     # line.set_title("Learning Curve",weight="bold", fontsize=15)
-
+    plt.grid(visible = False)
     plt.xlabel('Training size', fontsize = 12)
     plt.ylabel('Percent Error', fontsize = 12)
     plt.legend(fontsize = 'small', loc='upper right', framealpha = 0)
@@ -757,7 +913,7 @@ def plot_summary(pipeline, cmap, save, feature_order = False, order = None):
 
 
     #Plot Beeswarm
-    fig, ax1 = plt.subplots(1, 1, figsize = (8, 6))    
+    fig, ax1 = plt.subplots(1, 1, figsize = (4, 5))    
 
     if feature_order:
         input_params = pipeline['SHAP']['Input_Params']
@@ -784,14 +940,12 @@ def plot_summary(pipeline, cmap, save, feature_order = False, order = None):
                             show=False,
                             color_bar=False, 
                             color=plt.get_cmap(cmap))
-    # #Set X axis limis
-    # ax1.set_xlim(xmin = -0.2, xmax = 0.35)
 
     #Format Y axis
-    ax1.tick_params(axis='y', labelsize=20)
+    ax1.tick_params(axis='y', labelsize=12, color = 'black')
     #Format X axis
-    ax1.tick_params(axis='x', labelsize=12)
-    ax1.set_xlabel("SHAP Value (impact on model output)", fontsize = 20)
+    ax1.tick_params(axis='x', labelsize=12, color = 'black')
+    ax1.set_xlabel("SHAP Value (impact on model output)", fontsize = 12)
 
     #Colorbar
     cbar = plt.colorbar(ax = ax1, ticks = [], aspect= 15)
@@ -800,7 +954,12 @@ def plot_summary(pipeline, cmap, save, feature_order = False, order = None):
     cbar.ax.text(0.5, 1.02, 'High',fontsize = 12, transform=cbar.ax.transAxes, 
         va='bottom', ha='center')
     cbar.set_label(label = "Relative Feature Value", size = 12)
-
+    ax1.spines['left'].set_visible(False)
+    ax1.spines['bottom'].set_color('black')        # x-axis and y-axis spines
+    ax1.spines['right'].set_visible(False)
+    ax1.spines['top'].set_visible(False)
+    plt.gcf().set_size_inches(4,3.5)
+    plt.grid(visible=False)
     plt.savefig(save + f'{model_name}_{cell}_Summary.svg', dpi = 600, transparent = True, bbox_inches = 'tight')   
     plt.close()
 
@@ -816,7 +975,7 @@ def plot_importance(pipeline, save, feature_order = False, order = None):
     plt.rcParams['font.size'] = 12  
 
     #Plot
-    fig, ax1 = plt.subplots(1, 1, figsize = (6, 6))    
+    fig, ax1 = plt.subplots(1, 1, figsize = (5, 6))    
 
     if feature_order:
         input_params = pipeline['SHAP']['Input_Params']
@@ -848,6 +1007,8 @@ def plot_importance(pipeline, save, feature_order = False, order = None):
     ax1.tick_params(axis='y')
 
     #Save plot
+    plt.gcf().set_size_inches(4,3.5)
+    plt.grid(visible=False)
     plt.savefig(save + f'{model_name}_{cell}_Bar.svg', dpi = 600, transparent = True, bbox_inches = 'tight')
     plt.close()
 
@@ -1146,7 +1307,8 @@ def bumpplot(pipeline_list, lw, save, feature_order = None):
     ax.set_ylim(-0.20,1.02)
     ylim = ax.get_ylim()
     ax.set_xlim(-0.1,len(cell_names)-0.5)
-    plt.grid(axis = 'x')
+    plt.grid(axis = 'x', color = 'black', alpha = 0.8)
+    plt.grid(axis = 'y',visible=False)
 
 
     # Adding right axis labels

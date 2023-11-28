@@ -31,10 +31,9 @@ def feature_correlation(X, cell, save):
 
     # Print dist_linkage without scientific notation
     np.set_printoptions(precision=2, suppress=True)
-    #print(dist_linkage)
 
     #save as csv
-    np.savetxt(save + f"{cell}/dist_linkage.csv", dist_linkage, delimiter=",")
+    np.savetxt(save + f"dist_linkage.csv", dist_linkage, delimiter=",")
 
     dendro = hierarchy.dendrogram(dist_linkage, labels=X.columns.tolist(), leaf_rotation=90)
 
@@ -121,34 +120,34 @@ def feature_correlation(X, cell, save):
 
     plt.tight_layout()
 
-    plt.savefig(save + f'{cell}/Feature_Correlation_Plot.png', dpi=600, transparent = True, bbox_inches='tight')
+    plt.savefig(save + f'Feature_Correlation_Plot.png', dpi=600, transparent = True, bbox_inches='tight')
 
 
     return dist_linkage
 
-def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
+def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats):
     N_features = len(X_features.columns)
     N_feature_tracker = 100
     MAE_list = [] # empty list to store MAE values
-    MAE_std_list = [] # empty list to store MAE values
+    MAE_std_list = []
     spear_list = []
     spear_std_list = []
     pear_list = []
     pear_std_list = []
+    pred_list = []
+    exp_list = []
 
     feature_name_list = [] # empty list to store features names
     feature_number_list = [] # empty list to store number of features
     linkage_distance_list = [] # empty list to store the Ward'slinkage distance
 
     best_MAE = 1
-    previous_MAE = 1
 
     #Determine ordered list of features to remove
-    ordered_feature_removal_list = []
-    for n in range(0, 400, 1):
-        # select input features to be included in this model iteration based on Ward's linkage of n/10
+    ordered_feature_removal_list = ['None']
+    for n in range(0, 1000, 1):
         features_to_remove = []
-        distance = n/200
+        distance = n/500
         cluster_ids = hierarchy.fcluster(dist_linkage, distance, criterion="distance") 
         cluster_id_to_feature_ids = defaultdict(list) 
         
@@ -163,13 +162,11 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
             
         for feature in selected_features: # for loop to append the utilized input feature names to the empty list
             retained_features.append(X_features.columns[feature])
+
         for initial_feature in X_features.columns:
             if initial_feature not in retained_features:
                 features_to_remove.append(initial_feature)
 
-        if len(features_to_remove) <= len(ordered_feature_removal_list):
-            continue
-        
         #Add new removed feature to ordered feature list
         for feature in features_to_remove:
             if feature not in ordered_feature_removal_list:
@@ -181,36 +178,9 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
 
     initial_feature_list = X_features.columns.tolist() #Start with all features
     removed_feature_list = []
-
-
-    #Evaluate model with all features to find the best MAE
-    acc_results,spearman_results,pearson_results, _ = evaluate_model(X_features, Y, range(len(initial_feature_list)), model, N_CV)
-    best_MAE = np.mean(acc_results)
-
-    #append initial data to storage lists
-    feature_number_list.append(len(initial_feature_list)) # append the number of input features to empty list
-    feature_name_list.append(initial_feature_list) # append the list of feature names to an empty list of lists
-    removed_feature_list.append('')
-
-    MAE_list.append(np.mean(acc_results)) # append average MAE value to empty list
-    MAE_std_list.append(np.std(acc_results)) # append average MAE value to empty list
-
-    spear_list.append(np.mean(spearman_results)) # append average MAE value to empty list
-    spear_std_list.append(np.std(spearman_results)) # append average MAE value to empty list
-
-    pear_list.append(np.mean(pearson_results)) # append average MAE value to empty list
-    pear_std_list.append(np.std(pearson_results)) # append average MAE value to empty list
-    print(f'\n INITIAL MAE IS {best_MAE}')
-
-    best_results = [len(initial_feature_list), initial_feature_list, 
-                            removed_feature_list, 
-                            best_MAE, np.std(spearman_results),
-                            np.mean(spearman_results), np.std(spearman_results),
-                            np.mean(pearson_results), np.std(pearson_results),
-                            n/N_features]
-
     #Remove the first feature from the ordered feature removal list from all features
     iteration = 0
+    best_MAE = 1
     for feature in ordered_feature_removal_list:
         tested_features = initial_feature_list.copy()
 
@@ -218,128 +188,161 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV):
         if feature in initial_feature_list:
             tested_features.remove(feature)
 
-
-        print(f"\nTESTING WHEN {feature} IS REMOVED")
-        print("\nNo. FEATURES for TESTING: ", len(tested_features))
+        print(f"#############\nTESTING WHEN {feature} IS REMOVED")
+        print("No. FEATURES for TESTING: ", len(tested_features))
         selected_features = [X_features.columns.get_loc(col) for col in tested_features]
-        acc_results, spearman_results, pearson_results, new_model = evaluate_model(X_features, Y, selected_features, model, N_CV)
-
+        acc_results, spearman_results, pearson_results, predictions, experimental, new_model = evaluate_model(X_features, 
+                                                                                                              Y, 
+                                                                                                              selected_features, 
+                                                                                                              model, 
+                                                                                                              N_CV,
+                                                                                                              repeats=repeats)
         
-        iteration +=1
+        print(f'CURRENT BEST AVERAGE MAE IS {np.round(best_MAE, 5)}')
+        print(f'TEST AVERAGE MAE IS {np.round(np.mean(acc_results),5)}')
         # If the performance is equal or worse than previous than update parameters else keep the feature
-        if round(np.mean(acc_results),3) <= round(best_MAE,3):
-            print(f'\n\n{feature} WAS REMOVED AND BEST RESULTS UPDATED\n\n') 
+        if round(np.mean(acc_results),5) <= round(best_MAE,5):
+            print(f'\n{feature} WAS REMOVED AND BEST RESULTS UPDATED\n') 
 
+            #Record Features used/removed
             feature_number_list.append(len(tested_features)) # append the number of input features to empty list
             feature_name_list.append(tested_features) # append the list of feature names to an empty list of lists
-            initial_feature_list = tested_features #update the initial feature list to remove feature
-            removed_feature_list.append(feature)
-
-            #update best results
+            initial_feature_list = tested_features #update the initial feature list with reduced feature list
+            removed_feature_list.append(feature) #Add removed feature to removed list
+            
+            #Calculate results
             best_MAE = np.mean(acc_results)
-            best_model = deepcopy(new_model)
-            best_training_data = X_features.iloc[:,selected_features].copy(deep=True)
-            best_model.fit(best_training_data, Y) #Fit best model using all data
+            MAE_std = np.std(acc_results)
+            spearman = np.mean(spearman_results)
+            spear_std = np.std(spearman_results)
+            pearson  = np.mean(pearson_results)
+            pear_std = np.std(pearson_results)
 
-            #best_training_data = pd.concat([best_training_data, Y], axis = 1, ignore_index= True)
-            best_results = [len(tested_features), tested_features, 
-                            removed_feature_list,
-                            best_MAE, np.std(spearman_results),
-                            np.mean(spearman_results), np.std(spearman_results),
-                            np.mean(pearson_results), np.std(pearson_results),
+            MAE_list.append(best_MAE) # append average MAE value to empty list
+            MAE_std_list.append(MAE_std)
+            spear_list.append(spearman)
+            spear_std_list.append(spear_std)
+            pear_list.append(pearson)
+            pear_std_list.append(pear_std)
+
+            #Append model predictions and hold out set values
+            pred_list.append(predictions)
+            exp_list.append(experimental)
+            
+            #update best results
+            best_model = deepcopy(new_model)
+            best_training_data = X_features.iloc[:,selected_features].copy()
+        
+            best_results = [len(initial_feature_list), initial_feature_list, 
+                            removed_feature_list, 
+                            best_MAE, MAE_std,
+                            spearman, spear_std,
+                            pearson, pear_std,
+                            predictions, experimental,
                             n/N_features]
  
-            # Only append new reduction data if sucessful
-            MAE_list.append(np.mean(acc_results)) # append average MAE value to empty list
-            MAE_std_list.append(np.std(acc_results)) # append average MAE value to empty list
-
-            spear_list.append(np.mean(spearman_results)) # append average MAE value to empty list
-            spear_std_list.append(np.std(spearman_results)) # append average MAE value to empty list
-
-            pear_list.append(np.mean(pearson_results)) # append average MAE value to empty list
-            pear_std_list.append(np.std(pearson_results)) # append average MAE value to empty list
-
-        # print('\n##############################\n\nSTATUS REPORT:') 
-        # print('Iteration '+str(iteration)+' of '+str(len(ordered_feature_removal_list))+' completed') 
-        # print('No_Tested_Features:', len(tested_features))
-        # print('Test_Score: %.3f' % (np.mean(acc_results)))
-        # print('Spearman_Score: %.3f' % (np.mean(spearman_results)))
-        # print('Pearson_Score: %.3f' % (np.mean(pearson_results)))
-        # print('No_Best_features:', best_results[0])      
-        # print('Best_Features:', best_results[1])
-        # print('Currently removed features', best_results[2])
-                
-        # print("\n#############################\n ")
-
-    print('\nFINAL RETAINED FEATURES', best_results[1])
+            # # Only append new reduction data if sucessful
+            # MAE_list.append(np.mean(acc_results)) # append average MAE value to empty list
+            # MAE_std_list.append(np.std(acc_results))
+            # spear_list.append(spearman_results)
+            # pear_list.append(pearson_results)
+        else:
+            print(f'\n{feature} WAS NOT REMOVED \n') 
+        iteration +=1
+    print('###############\nFINAL RETAINED FEATURES', best_results[1])
+    print('\n# RETAINED FEATURES', len(best_results[1]))
     print('\nFINAL REMOVED FEATURES', best_results[2])
+
     # create a list of tuples with results model refinement
     list_of_tuples = list(zip(feature_number_list, feature_name_list, removed_feature_list, 
-                              MAE_list, MAE_std_list, 
-                              spear_list, spear_std_list, 
-                              pear_list, pear_std_list, 
+                              MAE_list, MAE_std_list,
+                              spear_list, spear_std_list,
+                              pear_list, pear_std_list,
+                              pred_list,
+                              exp_list,
                               linkage_distance_list)) 
     
 
     # create a dataframe with results model refinement
-    results_df = pd.DataFrame(list_of_tuples, columns = ['# of Features', 'Feature names', 'Removed Feature Names', 
-                                                         'MAE', 'MAE_std', 
-                                                         'Spearman', 'Spearman_std', 
+    results_df = pd.DataFrame(list_of_tuples, columns = ['# of Features', 
+                                                         'Feature names', 
+                                                         'Removed Feature Names', 
+                                                         'MAE', 'MAE_std',
+                                                         'Spearman', 'Spearman_std',
                                                          'Pearson', 'Pearson_std',
+                                                         'Predictions',
+                                                         'Hold_out_set',
                                                          'linkage distance']) 
     
     # create a dataframe with best model information
-    best_df = pd.DataFrame(np.transpose(best_results), index= ['# of Features', 'Feature names', 'Removed Feature Names', 
-                                                               'MAE', 'MAE_std', 
-                                                         'Spearman', 'Spearman_std', 
-                                                         'Pearson', 'Pearson_std',
-                                                         'linkage distance']) 
+    best_df = pd.DataFrame([best_results], columns= ['# of Features', 
+                                                               'Feature names', 
+                                                               'Removed Feature Names', 
+                                                                'MAE', 'MAE_std',
+                                                                'Spearman','Spearman_std',
+                                                                'Pearson', 'Pearson_std',
+                                                                'Predictions',
+                                                                'Hold_out_set',
+                                                                'linkage distance']) 
 
 
     return results_df, best_df, best_model, best_training_data
 
 
 #Use to retrain current models with different feature data
-def evaluate_model(X,Y, selected_features, model, N_CV):
-    acc_list = []
-    spearman_list = []
-    pearson_list = []
+def evaluate_model(X,y, selected_features, model, N_CV = 5, repeats = 5):
+    repeat_acc_list  = []
+    repeat_spear_list= []
+    repeat_pears_list= []
+    repeat_pred_list = []
+    repeat_test_list = []
 
-    model # assign selected model to clf_sel
-
-    #Kfold CV
-    for i in range(5): #For loop that splits and evaluates the data ten times
-        cv_outer = KFold(n_splits=N_CV, random_state= i+100, shuffle=True)
-        for j, (train_index, test_index) in enumerate(cv_outer.split(X)):
+    test_model = deepcopy(model)# assign selected model to clf_sel
+    selected_X = X.iloc[:,selected_features].copy()
+    Y = y.copy()
+    #Kfold spltting
+    for i in range(repeats):
+        pred_list = []
+        test_list = []
+        Kfold = KFold(n_splits=N_CV, random_state= i + 100, shuffle=True)
+        for j, (train_index, test_index) in enumerate(Kfold.split(X)):
             #Split X
-            X_train = X.iloc[train_index]
-            X_test = X.iloc[test_index]
+            X_train = selected_X.iloc[train_index]
+            X_test = selected_X.iloc[test_index]
 
             #Split Y
             y_train = Y.iloc[train_index]
             y_test = Y.iloc[test_index]
-
-                        
-            X_train_sel = X_train.iloc[:,selected_features] # select input features from training dataset based on Ward's Linkage value
-            X_test_sel = X_test.iloc[:,selected_features] # select input features from test dataset based on Ward's Linkage value
                     
-            model.fit(X_train_sel, np.ravel(y_train)) # fit the selected model with the training set
-            y_pred = model.predict(X_test_sel) # predict test set based on selected input features
+            test_model.fit(X_train, np.ravel(y_train)) # fit the selected model with the training set
+            y_pred = test_model.predict(X_test) # predict test set based on selected input features
 
-            # Get Model Statistics
-            acc = round(mean_absolute_error(y_pred, y_test), 3)
-            spearman = stats.spearmanr(y_pred, y_test)[0]
-            pearson = stats.pearsonr(y_pred, y_test)[0]
+            # append predictions and hold-out set
+            pred_list.append(y_pred)
+            test_list.append(y_test.values.flatten()) 
 
-            # Append model performance results to associated list
-            acc_list.append(acc)
-            spearman_list.append(spearman) 
-            pearson_list.append(pearson) 
+        pred = np.concatenate(pred_list)
+        test = np.concatenate(test_list)
 
-    return acc_list, spearman_list, pearson_list, model
+        #Calculate Performance Statistics
+        acc = mean_absolute_error(pred, test)
+        spearman = stats.spearmanr(pred, test)[0]
+        pearson = stats.pearsonr(pred, test)[0]
+
+        #append to lists
+        repeat_acc_list.append(acc)
+        repeat_spear_list.append(spearman)
+        repeat_pears_list.append(pearson)
+        repeat_pred_list.append(pred)
+        repeat_test_list.append(test)
+
+    #Refit new model on all selected training data
+    new_model = test_model.fit(selected_X, np.ravel(Y))
+
+    return repeat_acc_list, repeat_spear_list, repeat_pears_list, repeat_pred_list, repeat_test_list,  new_model
 
 
-def main(pipeline):
+def main(pipeline, repeats = 5):
     
     print('\n###########################\n\n RUNNING FEATURE REDUCTION')
     start_time = time.time()
@@ -363,7 +366,7 @@ def main(pipeline):
     dist_link = feature_correlation(X, cell, refined_model_save_path)
     
     #Test and save models using new Feature clusters 
-    results, best_results, best_model, best_data = eval_feature_reduction(dist_link, X, y, model, N_CV)
+    results, best_results, best_model, best_data = eval_feature_reduction(dist_link, X, y, model, N_CV, repeats)
 
     #Save Results into CSV file
     with open(refined_model_save_path + f'/{model_name}_Feature_Red_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
@@ -371,7 +374,7 @@ def main(pipeline):
 
     #Save Best Results into CSV file
     with open(refined_model_save_path + f'/{model_name}_Best_Model_Results.csv', 'w', encoding = 'utf-8-sig') as f: #Save file to csv
-        best_results.to_csv(f, index = False)
+        best_results.to_csv(f, index=False)
 
     #Save Best Results into pkl file
     with open(refined_model_save_path + f'/{model_name}_Best_Model_Results.pkl', 'wb') as file:
@@ -397,11 +400,13 @@ def main(pipeline):
     with open(refined_model_save_path + f'/{model_name}_Best_Model.pkl', 'wb') as file: 
         pickle.dump(best_model, file)
 
-    reduced_features = best_results.loc['Feature names', 0]
-    removed_features = best_results.loc['Removed Feature Names', 0]
+    reduced_features = best_results.at[0,'Feature names']
+    removed_features = best_results.at[0,'Removed Feature Names']
 
 
     #Update Pipeline
+    pipeline['Feature_Reduction']['N_CV'] = N_CV
+    pipeline['Feature_Reduction']['Repeats'] = repeats
     pipeline['Feature_Reduction']['Refined_Params'] = reduced_features
     pipeline['Feature_Reduction']['Removed_Params'] = removed_features
     pipeline['Feature_Reduction']['Refined_X'] = best_data

@@ -1,11 +1,2 @@
-﻿0
-8
-"['P_charged_centers', 'N_charged_centers', 'Hbond_D', 'Double_bonds', 'NP_ratio', 'Chol_DMG-PEG_ratio', 'Dlin-MC3+Helper lipid percentage', 'Dlin-MC3_Helper lipid_ratio']"
-"['', 'Hbond_A', 'cLogP', 'Total_Carbon_Tails', 'Zeta', 'PDI', 'Size']"
-0.0464
-0.010013190933902377
-0.9110956923148124
-0.010013190933902377
-0.9384682543771149
-0.010636940979299004
-28.5
+﻿# of Features,Feature names,Removed Feature Names,MAE,MAE_std,Spearman,Spearman_std,Pearson,Pearson_std,Predictions,Hold_out_set,linkage distance
+10,"['P_charged_centers', 'cLogP', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds', 'NP_ratio', 'Chol_DMG-PEG_ratio', 'Dlin-MC3+Helper lipid percentage', 'Dlin-MC3_Helper lipid_ratio']","['None', 'Zeta', 'PDI', 'N_charged_centers', 'Size']",0.04947807631796939,0.0003807356694856831,0.9095773049264858,0.0023273488558137184,0.9302870108680908,0.0013370889759321321,"[array([ 0.11, -0.01,  0.06, ...,  0.21,  0.3 ,  0.23]), array([0.14, 0.01, 0.01, ..., 0.16, 0.14, 0.23]), array([0.11, 0.04, 0.03, ..., 0.06, 0.29, 0.2 ]), array([0.  , 0.04, 0.01, ..., 0.21, 0.21, 0.23]), array([0.15, 0.11, 0.01, ..., 0.2 , 0.16, 0.29])]","[array([0.31, 0.  , 0.03, ..., 0.35, 0.27, 0.26]), array([0.23, 0.  , 0.03, ..., 0.  , 0.28, 0.13]), array([0.21, 0.  , 0.  , ..., 0.  , 0.43, 0.22]), array([0.  , 0.18, 0.  , ..., 0.28, 0.22, 0.11]), array([0.18, 0.21, 0.  , ..., 0.13, 0.18, 0.19])]",71.35714285714286

@@ -207,10 +207,8 @@ def run_tukey(data, save_path, cell):
     results_df = pd.DataFrame(tukey_results._results_table.data[1:], columns=tukey_results._results_table.data[0])
     
     # Save the results to a CSV file
-    results_df.to_csv(f'{save_path}{cell}_tukey_results.csv', index=False, )
+    results_df.to_csv(f'{save_path}{cell}_tukey_results.csv', index=False)
     
-    # # Print the results
-    # print(tukey_results)
 
 def get_spearman(data, cell1, cell2):
     if cell1 == cell2:
@@ -325,7 +323,6 @@ def extraction_all(model_name, model_path, N_CV):
 def get_Model_Selection_Error(model_list, model_path, N_CV):
     #Collect error for all best models
     ALL_AE = pd.DataFrame(columns = model_list)
-    ALL_PRED = pd.DataFrame(columns = model_list)
     #Extract and Calculate Absolute Error for each model
     for model_name in model_list:
         ALL_AE[model_name]= extraction_all(model_name, model_path, N_CV)['Absolute_Error']

@@ -106,10 +106,12 @@ class NESTED_CV:
                         'ccp_alpha': [0, 0.005, 0.01]}
           
         elif model_type == 'LGBM':
-          self.user_defined_model = LGBMRegressor(random_state=10) #was 4
+          self.user_defined_model = LGBMRegressor(random_state=10)
           self.p_grid ={"n_estimators":[100,150,200,250,300,400,500,600],
                         'boosting_type': ['gbdt', 'dart', 'goss'],
                         'num_leaves':[16,32,64,128,256],
+                        'max_bin': [10, 20, 30],
+                        'max_depth': [2, 6, 10, 14, 18, 22, 26, 30],
                         'learning_rate':[0.1,0.01,0.001,0.0001],
                         'min_child_weight': [0.001,0.01,0.1,1.0,10.0],
                         'subsample': [0.4,0.6,0.8,1.0],

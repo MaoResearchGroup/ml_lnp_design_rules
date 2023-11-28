@@ -10,10 +10,11 @@ from sklearn.preprocessing import MinMaxScaler
 import time
 from utilities import get_mean_shap
 from sklearn.manifold import TSNE
+from copy import deepcopy
 
 
 """**MAIN**"""
-def main(pipeline, N_bins):
+def main(pipeline, N_bins, refined = True):
   print('\n###########################\n\n RUNNING SHAP EXPLANATIONS')
   start_time = time.time()
 
@@ -21,12 +22,19 @@ def main(pipeline, N_bins):
   #Config
   cell = pipeline['Cell']
   model_name = pipeline['Model_Selection']['Best_Model']['Model_Name']
-  trained_model = pipeline['Feature_Reduction']['Refined_Model']
+  trained_model = deepcopy(pipeline['Model_Selection']['Best_Model']['Model'])
   X = pipeline['Feature_Reduction']['Refined_X']
-  input_params = pipeline['Feature_Reduction']['Refined_Params']
+  y = pipeline['Data_preprocessing']['y']
   shap_save_path = pipeline['Saving']['SHAP']
 
+  if refined:
+    input_params = pipeline['Feature_Reduction']['Refined_Params']
+  else:
+    input_params = pipeline['Data_preprocessing']['Input_Params']
+    
+  print(input_params)
   X = X[input_params].copy()
+  trained_model.fit(X,np.ravel(y))
 
   #initialize SHAP Explainer
   if model_name == 'XGB':
@@ -41,7 +49,6 @@ def main(pipeline, N_bins):
 
   #Get SHAP Values
   shap_values = explainer(X)
-
 
   #Get Best Feature Values based on Average SHAP Values
   best_feature_values, mean_shap = get_mean_shap(c = cell,

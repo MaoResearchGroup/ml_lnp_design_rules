@@ -13,28 +13,28 @@ def main():
   new_pipeline = False
   
   #Parts to Run/Update
-  run_preprocessing     = False
-  run_model_selection   = False
-  run_feature_reduction = False
+  run_preprocessing     = True
+  run_model_selection   = True
+  run_feature_reduction = True
   run_SHAP_explain      = True
   
   #Cell types to Run
-  cell_type_list = ['HepG2','HEK293']#, 'N2a', 'ARPE19','B16', 'PC3']
-  
+  cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
+
   
   ############### PARAMETERS ###############################
   
-  model_list = ['RF', 'MLR', 'lasso', 'PLS', 'kNN', 'LGBM', 'XGB', 'DT']#Did not include SVR 
+  model_list = ['RF','LGBM', 'XGB', 'DT', 'MLR', 'lasso', 'PLS', 'kNN']#Did not include SVR 
   ratiometric = True
   RLU_floor = 2
   size_cutoff = 100000
   PDI_cutoff = 1 #Use 1 to include all data
 
-  N_CV = 2
+  N_CV = 5
   prefix = "RLU_" #WARNING: HARDCODED
 
   ################ SAVING, LOADING##########################
-  RUN_NAME                  = f"Runs/test_Final_PDI{PDI_cutoff}_RLU{RLU_floor}/"
+  RUN_NAME                  = f"Runs/Final_PDI{PDI_cutoff}_RLU{RLU_floor}/"
   #RUN_NAME                  = f"Runs/Models_Final_All_Size_PDI{PDI_cutoff}_keep_Zeta_RLU{RLU_floor}"
   data_file_path            = 'Raw_Data/Final_Master_Formulas_updated.csv' #Where to extract training data
 
@@ -90,7 +90,7 @@ def main():
     #################### Feature Reduction #####################################
     if run_feature_reduction:
       #Timing (Estimated 4-8hrs)
-      pipeline_dict, _,_,_,_,_ = Feature_reduction.main(pipeline_dict)
+      pipeline_dict, _,_,_,_,_ = Feature_reduction.main(pipeline=pipeline_dict)
 
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
                     step = 'FEATURE REDUCTION')

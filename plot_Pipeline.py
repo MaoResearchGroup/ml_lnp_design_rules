@@ -6,13 +6,15 @@ import os
 def main():
 
         #Specify which plots to make
+        manuscript             = True
         prelim                 = False
         plot_f_distribution    = False
-        plot_model_selection   = True
+        plot_model_selection   = False
         feature_reduction      = False
         run_learning_curve     = False
+        redo_learning_curve    = False
         run_SHAP_plots         = False
-        plot_bump              = False 
+        plot_bump              = True
 
 
         RUN_NAME  = f"Runs/Final_PDI1_RLU2/"
@@ -44,33 +46,40 @@ def main():
         
         
         #### MANUSCRIPT WIDE FIGURES/TABLES
-        pipe_list = []
-        for c in cell_type_list:
-                #Import Pipeline of interest
-                with open(RUN_NAME + f'{c}/Pipeline_dict.pkl', 'rb') as file:
-                        pipeline_results = pickle.load(file)
-                pipe_list.append(pipeline_results)
-        
-        #Comparison of Transfection
-        if plot_f_distribution:
-                plotter.plot_tfxn_dist_comp(pipeline_list = pipe_list,
-                                                raw = True,
+        if manuscript:
+                pipe_list = []
+                for c in cell_type_list:
+                        #Import Pipeline of interest
+                        with open(RUN_NAME + f'{c}/Pipeline_dict.pkl', 'rb') as file:
+                                pipeline_results = pickle.load(file)
+                        pipe_list.append(pipeline_results)
+                
+                #Comparison of Transfection
+                if plot_f_distribution:
+                        plotter.plot_tfxn_dist_comp(pipeline_list = pipe_list,
+                                                        raw = True,
+                                                        save= manuscript_save_path)
+                        plotter.tfxn_heatmap(pipeline_list=pipe_list,
+                                        save=manuscript_save_path,
+                                        helper_lipid=True)
+                #Comparison of cell-cell model MAE
+                if plot_model_selection:
+                        plotter.plot_cell_comparision(pipeline_list = pipe_list,
                                                 save= manuscript_save_path)
-                plotter.tfxn_heatmap(pipeline_list=pipe_list,
-                                     save=manuscript_save_path)
-        #Comparison of cell-cell model MAE
-        if plot_model_selection:
-                plotter.plot_cell_comparision(pipeline_list = pipe_list,
-                                              save= manuscript_save_path)
-                plotter.tabulate_model_selection_results(pipeline_list=pipe_list,
-                                                         save=manuscript_save_path)
-        
-        #Design Feature Bump Plots
-        if plot_bump:
-                plotter.bumpplot(pipeline_list = pipe_list,
-                                 lw = 3,
-                                 feature_order= feature_plotting_order,
-                                 save= manuscript_save_path)
+                        plotter.tabulate_model_selection_results(pipeline_list=pipe_list,
+                                                                save=manuscript_save_path)
+                if feature_reduction:
+                        plotter.plot_refined_model_comparisions(pipeline_list= pipe_list,
+                                                                save = manuscript_save_path)
+                        plotter.tabulate_refined_model_results(pipeline_list=pipe_list,
+                                                        cell_type_list=cell_type_list,
+                                                        save=manuscript_save_path)
+                #Design Feature Bump Plots
+                if plot_bump:
+                        plotter.bumpplot(pipeline_list = pipe_list,
+                                        lw = 3,
+                                        feature_order= feature_plotting_order,
+                                        save= manuscript_save_path)
         
         
         ##### CELL TYPE SPECIFIC FIGURES ###########
@@ -113,13 +122,14 @@ def main():
                 if feature_reduction:
                         print('\n########## FEATURE REDUCTION PLOTTING')
                         plotter.plot_feature_reduction(pipeline_results)
+                        
 
                 # Learning Curve 
                 if run_learning_curve:
                         print('\n########## LEARNING CURVE PLOTTING')
                         #Timing (10 minutes)
-                        if pipeline_results['STEPS_COMPLETED']['Learning_Curve'] == False:
-                                pipeline_results = plotter.get_learning_curve(pipeline_results)
+                        if pipeline_results['STEPS_COMPLETED']['Learning_Curve'] == False or redo_learning_curve:
+                                pipeline_results = plotter.get_learning_curve(pipeline_results, refined = False)
                                 
                                 save_pipeline(pipeline=pipeline_results, path = pipeline_path, 
                                               step= 'LEARNING CURVE')
@@ -156,21 +166,18 @@ def main():
                                              save = SHAP_save,
                                              title = False)
                         #Formulation Features
-                        for f in ['NP_ratio',
-                                   'Chol_DMG-PEG_ratio',
-                                   'Dlin-MC3+Helper lipid percentage',
-                                   'Dlin-MC3_Helper lipid_ratio' ]: 
-                                plotter.plot_SHAP_cluster(pipeline = pipeline_results,
-                                                feature_name=f,
-                                                cmap = 'viridis_r',
-                                                size = 2,
-                                                save = SHAP_save,
-                                                title = False)
-                        
-                                #Embedded Colored by SHAP Value
-                                plotter.plot_embedded(pipeline=pipeline_results, 
-                                                feature_name= f,
-                                                save = SHAP_save)
+
+                        plotter.plot_SHAP_cluster(pipeline = pipeline_results,
+                                        feature_name='all',
+                                        cmap = 'viridis_r',
+                                        size = 2,
+                                        save = SHAP_save,
+                                        title = False)
+                
+                        #Embedded Colored by SHAP Value
+                        plotter.plot_embedded(pipeline=pipeline_results, 
+                                        feature_name= 'all',
+                                        save = SHAP_save)
 
                         #Plot dependence
                         plotter.plot_dependence(pipeline=pipeline_results,
