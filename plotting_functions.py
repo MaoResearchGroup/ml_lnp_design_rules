@@ -6,6 +6,7 @@ import plotly.express as px
 import os
 import matplotlib.pyplot as plt
 from matplotlib import colors
+from matplotlib.ticker import MultipleLocator
 from utilities import get_spearman, extract_training_data, run_tukey, extraction_all
 from sklearn.decomposition import PCA
 from sklearn.model_selection import KFold
@@ -15,6 +16,7 @@ import time
 import shap
 import pickle
 from itertools import chain
+from matplotlib.colors import Normalize
 
 
 ########## INITIAL FEATURE ANALYSIS PLOTS ##################
@@ -44,7 +46,7 @@ def tfxn_heatmap(pipeline_list, save, helper_lipid = False):
         for cell2 in cell_type_list:
             all_corr.loc[cell1, cell2] = get_spearman(training_data, cell1, cell2)
     fig, ax = plt.subplots(1,1,figsize=(3,3))
-    heatmap = sns.heatmap(round(np.abs(all_corr),2), vmin=.2, vmax=1, cmap='Blues', annot = True, annot_kws={"size": 6}, cbar = False)
+    heatmap = sns.heatmap(round(np.abs(all_corr),2), vmin=.2, vmax=1, cmap='Blues', annot = True, annot_kws={"size": 8}, cbar = False)
     heatmap.invert_yaxis()
     plt.tick_params(axis='y', which='both', labelsize=10)
     plt.tick_params(axis='x', which='both', labelsize=10)
@@ -81,7 +83,8 @@ def tfxn_heatmap(pipeline_list, save, helper_lipid = False):
                     lipid_corr.loc[cell1, cell2] = get_spearman(lipid_data, cell1, cell2)
     
             fig, ax = plt.subplots(1,1,figsize=(3,3))    
-            sns.heatmap(round(np.abs(lipid_corr),2),vmin=-0.2, vmax=1,cmap='Blues', annot = True, annot_kws={"size": 6})
+            heatmap = sns.heatmap(round(np.abs(lipid_corr),2),vmin=-0.2, vmax=1,cmap='Blues', annot = True, annot_kws={"size": 8})
+            heatmap.invert_yaxis()
             plt.gca()
             plt.title(lipid)
             plt.savefig(save + f'{lipid}_tfxn_Heatmap.svg', dpi=600, format = 'svg', transparent=True, bbox_inches='tight')
@@ -93,7 +96,7 @@ def tfxn_heatmap(pipeline_list, save, helper_lipid = False):
 
 
 
-def plot_tfxn_dist_comp(pipeline_list, raw, save):
+def plot_tfxn_dist_comp(pipeline_list, raw, save, new_order = None, pipe_order = None):
 
     #Plot parameters
     plt.rcParams["font.family"] = "Arial"
@@ -101,27 +104,42 @@ def plot_tfxn_dist_comp(pipeline_list, raw, save):
 
     
     #subplots
-    fig, ax = plt.subplots(3,2, sharex = True, sharey=True, figsize = (3, 4))
+    fig, ax = plt.subplots(3,2, sharex = True, sharey='row', figsize = (3.3, 4))
 
     sns.set(font_scale = 1)
 
     #limits
-    plt.ylim(-10, 400)
     plt.xlim(0, 13)
+    # ax[0, 0].set_ylim(0,300)
+    # ax[1, 0].set_ylim(0,400)
+    # ax[2, 0].set_ylim(0,120)
+    # ax[0, 1].set_ylim(0,300)
+    # ax[1, 1].set_ylim(0,400)
+    # ax[2, 1].set_ylim(0, 120)
 
+    #tick labels
+    ax[2, 0].set_xlabel('ln(RLU)')
+    ax[2, 1].set_xlabel('ln(RLU)')
+    ax[0, 0].set_yticks(np.arange(0, 500,100), fontsize = 8)
+    ax[1, 0].set_yticks(np.arange(0, 300,50), fontsize = 8)
+    ax[2, 0].set_yticks(np.arange(0, 150,50), fontsize = 8)
     #loop through subplots
     for i, ax in enumerate(ax.flatten()):
 
         #Get Training Data for each pipeline
-        pipeline = pipeline_list[i]
+        if new_order is None:
+            pipeline = pipeline_list[i]
+        else:
+            pipeline = pipeline_list[pipe_order.index(new_order[i])]
+
         cell = pipeline['Cell']
         prefix = pipeline['Data_preprocessing']['prefix']
         if raw:
             data = pipeline['Data_preprocessing']['raw_data']
-            RLU_floor = 0
         else:
             data = pipeline['Data_preprocessing']['all_proc_data']
-            RLU_floor = pipeline['Data_preprocessing']['RLU_floor']
+        
+        RLU_floor = pipeline['Data_preprocessing']['RLU_floor']
 
 
         if i ==1:
@@ -139,17 +157,26 @@ def plot_tfxn_dist_comp(pipeline_list, raw, save):
                           legend=show_legend,
                           line_kws={'linewidth': 2},
                           edgecolor='white') 
-        ax.set_yticks(np.arange(0, 400,100), fontsize = 6)
-        ax.set_xticks(np.arange(RLU_floor, 15, 3), fontsize = 6)
+        
+        ax.set_xticks(np.arange(0, 15, 3), fontsize = 6)
 
-        if i in [3, 4, 5]:
-            ax.set_xlabel('ln(RLU)')
+        # if i in [3, 4, 5]:
+        #     ax.set_xlabel('ln(RLU)')
 
 
         ax.text(0.5, 0.85, cell, transform=ax.transAxes,
         fontsize=8, ha='center')
+
+        #Add borders
+        ax.spines['left'].set_color('black')
+        ax.spines['bottom'].set_color('black')
+        ax.spines['right'].set_color('black')
+        ax.spines['top'].set_color('black')
         #remove grid lines
         plt.grid(False)
+
+        
+
 
         if show_legend:
             sns.move_legend(
@@ -160,27 +187,29 @@ def plot_tfxn_dist_comp(pipeline_list, raw, save):
                 frameon=False)
             plt.setp(ax.get_legend().get_texts(), fontsize='8')
             plt.setp(ax.get_legend().get_title(), fontsize='8') 
-    
 
-
+        #Vertical line to show floor used during processing
+        if raw:
+            ax.axvline(x=RLU_floor, color='gray', linestyle='--')
     #Save Transfection Distribution
-    plt.savefig(save + f'tfxn_dist.png', dpi = 600, transparent = True, bbox_inches = "tight")
+    
+    plt.savefig(save + f'tfxn_dist.svg', dpi = 600, transparent = True, bbox_inches = "tight")
     plt.close()
 
 
-def tfxn_dist(pipeline, raw, save):
+def feature_dist(pipeline, feature_name, raw, save):
     #Config
     cell = pipeline['Cell']
     prefix = pipeline['Data_preprocessing']['prefix']
+    if feature_name == 'Transfection_Efficiency':
+        feature = prefix + cell
+    else:
+        feature = feature_name
 
     if raw:
         data = pipeline['Data_preprocessing']['raw_data']
-        RLU_floor = 0
     else:
         data = pipeline['Data_preprocessing']['all_proc_data']
-        RLU_floor = pipeline['Data_preprocessing']['RLU_floor']
-
-
 
     #Plot parameters
     plt.rcParams["font.family"] = "Arial"
@@ -193,23 +222,21 @@ def tfxn_dist(pipeline, raw, save):
 
 
         
-    ax = sns.histplot(data=data, x=prefix + cell,
+    ax = sns.histplot(data=data, x= feature,
                         multiple="stack", 
                         hue="Helper_lipid", 
-                        binwidth = 0.5,
                         hue_order= data.Helper_lipid.unique(), 
-                        ax = ax, 
+                        ax = ax,
+                        palette= "husl", 
                         legend=True,
                         line_kws={'linewidth': 2},
                         edgecolor='white') 
 
-    ax.set_xticks(np.arange(RLU_floor, 15, 3), fontsize = 6)
-    ax.set_xlabel('ln(RLU)')
-
-
-    ax.text(0.5, 0.85, cell, transform=ax.transAxes,
-        fontsize=8, ha='center')
-
+    ax.set_xlabel(feature_name)
+    ax.spines['left'].set_color('black')
+    ax.spines['bottom'].set_color('black')
+    ax.spines['right'].set_color('black')
+    ax.spines['top'].set_color('black')
 
     sns.move_legend(
         ax, "lower center",
@@ -219,9 +246,11 @@ def tfxn_dist(pipeline, raw, save):
         frameon=False)
     plt.setp(ax.get_legend().get_texts(), fontsize='8')
     plt.setp(ax.get_legend().get_title(), fontsize='8') 
+    
 
-    #Save Transfection Distribution
-    plt.savefig(save + f'tfxn_dist.png', dpi = 600, transparent = True, bbox_inches = "tight")
+    plt.grid(visible=False)
+
+    plt.savefig(save + f'{feature_name}_dist.svg', dpi = 600, transparent = True, bbox_inches = "tight")
     plt.close()
 
 def tfxn_clustering(X, Y, input_params, figure_save, cell):
@@ -259,24 +288,6 @@ def tfxn_clustering(X, Y, input_params, figure_save, cell):
 
     plt.savefig(figure_save + f'{cell}_clustered_tfxn.svg', dpi = 600, transparent = True, bbox_inches = 'tight')
     plt.close()
-
-def feature_distribution(pipeline, save):
-    #Config
-    cell = pipeline['Cell']
-    data = pipeline['Data_preprocessing']['X']
-    input_params = pipeline['Data_preprocessing']['Input_Params']
-
-    #Config Plot
-    plt.rcParams['font.family'] = 'Arial'
-    plt.rcParams['font.size'] = 12
-
-    for feature in input_params:
-        
-        f_data = data.loc[:, feature]
-        fig = plt.figure(figsize = (4,4))
-        sns.histplot(f_data)
-        plt.savefig(save + f"{feature}_distribution.svg", dpi=600, format = 'svg', transparent=True, bbox_inches = "tight")
-        plt.close()
 
 ########## MODEL SELECTION PLOTS ##################
 def plot_AE_Box(pipeline, save):
@@ -436,11 +447,13 @@ def plot_predictions(pipeline, save, pred = None, exp = None):
 
 def tabulate_refined_model_results(pipeline_list, cell_type_list, save):
     
-    df_best_cell_model = pd.DataFrame(index = ['Model_Name','MAE', 'Spearman', 'Pearson'], columns = cell_type_list)
+    df_best_cell_model = pd.DataFrame(index = ['Model_Name','Retained_Features','# of Features', 'MAE', 'Spearman', 'Pearson'], columns = cell_type_list)
     for pipe in pipeline_list:
         df = pipe['Feature_Reduction']['Final_Results'].copy()
         cell = pipe['Cell']
         df_best_cell_model.at['Model_Name', cell] = pipe['Model_Selection']['Best_Model']['Model_Name']
+        df_best_cell_model.at['Retained_Features',cell] = df.at[0,'Feature names']
+        df_best_cell_model.at['# of Features',cell] = df.at[0,'# of Features']
         df_best_cell_model.at['MAE',cell] = df.at[0,'MAE']
         df_best_cell_model.at['Spearman', cell] =df.at[0,'Spearman']
         df_best_cell_model.at['Pearson',cell] = df.at[0,'Pearson']
@@ -448,6 +461,7 @@ def tabulate_refined_model_results(pipeline_list, cell_type_list, save):
     
     with open(save + "Feature_Red_Overall_Best_Results.csv", 'w', encoding = 'utf-8-sig') as f:
         df_best_cell_model.to_csv(f) 
+
 def plot_refined_model_comparisions(pipeline_list, save):
     MAE_list = []
     cell_list = []
@@ -620,7 +634,7 @@ def tabulate_model_selection_results(pipeline_list,save):
     df_spearman = pd.DataFrame(index = all_model_list, columns = cell_type_list)
     df_pearson = pd.DataFrame(index = all_model_list, columns = cell_type_list)
 
-    df_best_cell_model = pd.DataFrame(index = ['Model_Name','MAE', 'Spearman', 'Pearson'], columns = cell_type_list)
+    df_best_cell_model = pd.DataFrame(index = ['Model_Name','Hyper_Params', 'MAE', 'Spearman', 'Pearson'], columns = cell_type_list)
 
     for pipe in pipeline_list:
         cell = pipe['Cell']
@@ -654,6 +668,7 @@ def tabulate_model_selection_results(pipeline_list,save):
                 df_best_cell_model.at['MAE', cell] = MAE
                 df_best_cell_model.at['Spearman', cell] =spearman
                 df_best_cell_model.at['Pearson', cell] =pearson
+                df_best_cell_model.at['Hyper_Params', cell] = pipe['Model_Selection']['Best_Model']['Hyper_Params']
     
     ########## Tabulate Results ##################
     with open(save + "Model_Selection_MAE.csv", 'w', encoding = 'utf-8-sig') as f:
@@ -702,21 +717,24 @@ def plot_feature_reduction(pipeline):
                 ecolor='darkgray', elinewidth=lw, capsize=cap, capthick=cap, alpha = 0.6)
 
     # Draw a line connecting the points for Average MAE
-    ax1.plot(stats_df['# of Features'], stats_df['Error'], color=palette[0], alpha = 0.8, label='Error', linewidth=lw)
+    ax1.plot(stats_df['# of Features'], stats_df['Error'], color=palette[0], marker = 'o', 
+             markersize = m_size, markerfacecolor='black', markeredgecolor='black', alpha = 0.8, label='Error', linewidth=lw)
 
     # Plot error bars for Spearman correlation coefficient
     ax2.errorbar(stats_df['# of Features'], stats_df['Spearman'], yerr=stats_df['Spearman_std'], fmt='v', markersize = m_size, color='black',
                 ecolor='darkgray', elinewidth=lw, capsize=cap, capthick=cap, alpha = 0.6)
 
     # Draw a line connecting the points for Spearman correlation coefficient
-    ax2.plot(stats_df['# of Features'], stats_df['Spearman'], color=palette[2], alpha = 0.8, label='Spearman', linewidth=lw)
+    ax2.plot(stats_df['# of Features'], stats_df['Spearman'], color=palette[2], marker = 'v',
+             markersize = m_size, markerfacecolor='black', markeredgecolor='black',alpha = 0.8, label='Spearman', linewidth=lw)
 
     # Plot error bars for Pearson correlation coefficient
     ax2.errorbar(stats_df['# of Features'], stats_df['Pearson'], yerr=stats_df['Pearson_std'], fmt='^', markersize = m_size, color='black',
                 ecolor='darkgray', elinewidth=lw, capsize=cap, capthick=cap, alpha = 0.6)
 
     # Draw a line connecting the points for Pearson correlation coefficient
-    ax2.plot(stats_df['# of Features'], stats_df['Pearson'], color=palette[4], alpha = 0.8,label='Pearson', linewidth=lw)
+    ax2.plot(stats_df['# of Features'], stats_df['Pearson'], color=palette[4], marker = '^',
+             markersize = m_size, markerfacecolor='black', markeredgecolor='black',alpha = 0.8,label='Pearson', linewidth=lw)
 
 
     # Set labels for the x-axis and y-axes
@@ -730,14 +748,18 @@ def plot_feature_reduction(pipeline):
     ax1.invert_xaxis()
 
     # Set labels on x and y axis
-    ax1.set_xticks(np.arange(int(stats_df['# of Features'].min()), int(stats_df['# of Features'].max()) + 1, 2))
-    ax1.set_yticks(np.arange(0, 20, 5))
+    ax1.set_xticks(np.arange(int(stats_df['# of Features'].min()), int(stats_df['# of Features'].max()) + 1, 2), color = 'black')
+    ax1.set_yticks(np.arange(0, 20, 5), color = 'black')
     ax1.set_yticklabels(ax1.get_yticklabels(), fontsize = label_size)
     ax1.set_xticklabels(ax1.get_xticklabels(), fontsize = label_size)
 
     # Set right axis y limits
-    ax2.set_yticks(np.linspace(0.5, 1, 3))
-    ax2.tick_params(axis = 'y', labelsize=label_size)
+    ax2.set_ylim (0.6, 1)
+    ax2.set_yticks(np.linspace(0.6, 1, 3), color = 'black')
+    ax2.yaxis.set_minor_locator(MultipleLocator(0.1))
+    # ax2.tick_params(axis = 'y', labelsize=label_size)
+    ax2.tick_params(axis='y', which='minor', size=3, width=1)
+    #ax2.tick_params(axis =which='minor', length=3, width=1)
 
 
     # Combine the legends from both axes
@@ -909,12 +931,13 @@ def plot_learning_curve(pipeline):
 
 
 #################### SHAP PLOTS #########################
-def plot_summary(pipeline, cmap, save, feature_order = False, order = None):
+def plot_summary(pipeline, cmap, save, feature_order = False):
 
     #Config
     cell = pipeline['Cell']
     model_name = pipeline['Model_Selection']['Best_Model']['Model_Name']
     shap_values = pipeline['SHAP']['SHAP_Values']
+    X = pipeline['SHAP']['X']
 
     #Plotting
     plt.rcParams['font.family'] = 'Arial'
@@ -922,20 +945,14 @@ def plot_summary(pipeline, cmap, save, feature_order = False, order = None):
 
 
     #Plot Beeswarm
-    fig, ax1 = plt.subplots(1, 1, figsize = (4, 5))    
+    fig, ax1 = plt.subplots(1, 1, figsize = (5.5, 5))    
 
-    if feature_order:
+    if feature_order is not None:
+
         input_params = pipeline['SHAP']['Input_Params']
-        if order == None:
-            #Create Feature Order
-            col2num = {col: i for i, col in enumerate(input_params)}
-            final_order = list(map(col2num.get, input_params)) 
-
-        else:
-            result_order = [item for item in order if item in input_params]
-            col2num = {col: i for i, col in enumerate(result_order)}
-            final_order = list(map(col2num.get, result_order))
-            final_order.reverse() #To order top to bottom
+        result_order = [item for item in feature_order if item in input_params]
+        col2num = {col: i for i, col in enumerate(input_params)}
+        final_order = list(map(col2num.get, result_order))
 
         shap.plots.beeswarm(shap_values, 
                             max_display=15,
@@ -967,13 +984,13 @@ def plot_summary(pipeline, cmap, save, feature_order = False, order = None):
     ax1.spines['bottom'].set_color('black')        # x-axis and y-axis spines
     ax1.spines['right'].set_visible(False)
     ax1.spines['top'].set_visible(False)
-    plt.gcf().set_size_inches(4,3.5)
+    plt.gcf().set_size_inches(5.2,3.5)
     plt.grid(visible=False)
     plt.savefig(save + f'{model_name}_{cell}_Summary.svg', dpi = 600, transparent = True, bbox_inches = 'tight')   
     plt.close()
 
 
-def plot_importance(pipeline, save, feature_order = False, order = None):
+def plot_importance(pipeline, save, feature_order = None):
     #Config
     cell = pipeline['Cell']
     model_name = pipeline['Model_Selection']['Best_Model']['Model_Name']
@@ -986,19 +1003,11 @@ def plot_importance(pipeline, save, feature_order = False, order = None):
     #Plot
     fig, ax1 = plt.subplots(1, 1, figsize = (5, 6))    
 
-    if feature_order:
+    if feature_order is not None:
         input_params = pipeline['SHAP']['Input_Params']
-        if order == None:
-            #Create Feature Order
-            col2num = {col: i for i, col in enumerate(input_params)}
-            final_order = list(map(col2num.get, input_params)) 
-
-        else:
-            result_order = [item for item in order if item in input_params]
-            col2num = {col: i for i, col in enumerate(result_order)}
-            final_order = list(map(col2num.get, result_order))
-            final_order.reverse() #To order top to bottom
-        
+        result_order = [item for item in feature_order if item in input_params]
+        col2num = {col: i for i, col in enumerate(input_params)}
+        final_order = list(map(col2num.get, result_order))
         shap.plots.bar(shap_values, 
                 max_display=15,
                 show=False,
@@ -1044,10 +1053,10 @@ def plot_interaction(pipeline, save, cmap = 'viridis_r'):
                       show = False, 
                       color=plt.get_cmap(cmap))
     # f = plt.gcf()
-    plt.gcf().set_size_inches(6, 8)
+    plt.gcf().set_size_inches(30, 30)
     plt.colorbar()
     #Save plot
-    plt.savefig(save + f'{model_name}_{cell}_inter_summary.png', bbox_inches = 'tight')
+    plt.savefig(save + f'{model_name}_{cell}_inter_summary.svg', bbox_inches = 'tight')
     plt.close()
 
 #Fix
@@ -1082,7 +1091,7 @@ def plot_force(formulation, pipeline, save, cmap = 'viridis_r'):
     plt.savefig(save + f'{model_name}_{cell}_{formulation}_Force.png', bbox_inches = 'tight')  
     # plt.close()
 
-def plot_dependence(pipeline, feature_name, save, interaction_feature = None, cmap = 'viridis_r'):
+def plot_dependence(pipeline, feature_list, save, interaction_feature_list = None, cmap = 'viridis_r'):
     
     #Config
     cell = pipeline['Cell']
@@ -1091,75 +1100,100 @@ def plot_dependence(pipeline, feature_name, save, interaction_feature = None, cm
     X = pipeline['SHAP']['X']
     input_params = pipeline['SHAP']['Input_Params']  
 
-    shap.dependence_plot(ind=feature_name, 
-                        shap_values=shap_values.values, 
-                        features=X, 
-                        feature_names=input_params,
-                        interaction_index = interaction_feature,
-                        show =False)
-    #Save plot
-    plt.savefig(save + f'{model_name}_{cell}_{feature_name}_{interaction_feature}_dependence.png', bbox_inches = 'tight')
-    plt.close() 
+    for feature_name in feature_list:
+        for interaction_feature in interaction_feature_list:
+            if feature_name == interaction_feature:
+                continue
+            shap.dependence_plot(ind=feature_name, 
+                                shap_values=shap_values.values, 
+                                features=X, 
+                                feature_names=input_params,
+                                interaction_index = interaction_feature,
+                                show =False)
+            #Save plot
+            if os.path.exists(f'{save}Dependence/') == False:
+                os.makedirs(f'{save}Dependence/', 0o666)
+            plt.savefig(f'{save}Dependence/{model_name}_{cell}_{feature_name}_{interaction_feature}_dependence.png', bbox_inches = 'tight')
+            plt.close() 
 
 #wrapper for SHAP_Clusterplot
-def plot_SHAP_cluster(pipeline, save, feature_name = 'all', cmap = 'viridis_r', size = 3, title = True): 
+def plot_SHAP_cluster(pipeline, save, feature_name = 'all', cmap = 'viridis_r', size = 3,  title = True,shap_values = False): 
     input_params = pipeline['SHAP']['Input_Params']
     if feature_name == 'all':
             for feature_name in input_params:
-                SHAP_clusterplot(pipeline, feature_name, cmap, size, save, title)
+                SHAP_clusterplot(pipeline, feature_name, cmap, size, save, title, shap_values)
     else:
-        SHAP_clusterplot(pipeline, feature_name, cmap, size, save, title)
+        SHAP_clusterplot(pipeline, feature_name, cmap, size, save, title, shap_values)
 
-def SHAP_clusterplot(pipeline, feature_name, cmap, size, save, title):
+def SHAP_clusterplot(pipeline, feature_name, cmap, size, save, title, shap_values = False):
     
     #Config
     cell = pipeline['Cell']
     model_name = pipeline['Model_Selection']['Best_Model']['Model_Name']
     projections = pipeline['SHAP']['TSNE_Embedding']
 
-            
-    if feature_name == 'Transfection Efficiency':
-        feature_values = pipeline['SHAP']['y'].values
-        min = 0
-        max = 1
+    if shap_values:
+        input_params = pipeline['SHAP']['Input_Params'].copy()
+        shap = pipeline['SHAP']['SHAP_Values'].values.copy()
+        shap_df = pd.DataFrame(shap, columns = input_params)
+        feature_values = shap_df[feature_name].values
+        min = -0.3
+        max = 0.3
+        
+
     else:
-        feature_values = pipeline['SHAP']['X'].loc[:,feature_name]
-        min = feature_values.min()
-        max = feature_values.max()
-
-    #Normalize
-    color_values = (feature_values-min)/(max-min)  
-
+        if feature_name == 'Transfection Efficiency':
+            feature_values = pipeline['SHAP']['y'].values
+            min = 0
+            max = 1
+        else:
+            feature_values = pipeline['SHAP']['X'].loc[:,feature_name]
+            min = feature_values.min()
+            max = feature_values.max()
+    norm = Normalize(vmin = min, vmax = max)
+        # #Normalize
+        # color_values = (feature_values-min)/(max-min)
+        # norm = None  
+    
     plt.rcParams["font.family"] = "Arial"
     plt.rcParams['font.size'] = 12
 
-    f = plt.figure(figsize=(size,size))
+    f = plt.figure(figsize=(size*.8,size))
     plt.scatter(projections[:,0],
             projections[:,1],
-            c = color_values,
+            c = feature_values,
+            norm = norm,
             marker = 'o',
             s = size*5,
             linewidth=0.1, 
-            alpha=0.8, 
+            alpha=0.6, 
             edgecolor='black', 
             cmap=cmap)
     # plt.title(f"{title}")
     plt.xlabel('Dimension 1')
     plt.ylabel('Dimension 2')
 
+    #Colorbar
     cb = plt.colorbar(label=None, aspect=40, orientation="horizontal")
     cb.set_alpha(1)
     cb.draw_all()
     cb.outline.set_linewidth(0.2)
     cb.ax.tick_params('x', length=2)
     cb.ax.xaxis.set_label_position('top')
+    if shap_values:
+        ticks = [min, (min + max) / 2, max]
+    else:
+        ticks = [min, max]
+    cb.set_ticks(ticks)
+    cb.ax.set_xticklabels(cb.ax.get_xticklabels(), fontsize=10, color="black", weight="bold")
+
     if title:
         cb.ax.get_title()
         cb.ax.set_title(label=f"{feature_name}", fontsize=10, color="black", weight="bold")
     
-    cb.set_ticks([0.05, 0.95])
-    cb.set_ticklabels([min, max])
-    cb.ax.set_xticklabels(cb.ax.get_xticklabels(), fontsize=10, color="black", weight="bold")
+    # cb.set_ticks([0, 1])
+    # cb.set_ticklabels([min, max])
+    
 
     plt.gca().axis("off") # no axis
 
@@ -1167,10 +1201,18 @@ def SHAP_clusterplot(pipeline, feature_name, cmap, size, save, title):
     plt.gca().set(ylim=(-30, 30), yticks=np.arange(-40, 40, 10))
     plt.gca().set(xlim=(-40, 60), xticks=np.arange(-50, 70, 10))
 
-    plt.savefig(f'{save}{model_name}_{cell}_{feature_name}_feature_cluster.svg', dpi = 600, transparent = True, bbox_inches = 'tight')
+    if shap_values:
+        #Check save path
+        if os.path.exists(f'{save}Embedded_SHAP_values/') == False:
+                os.makedirs(f'{save}Embedded_SHAP_values/', 0o666)
+        plt.savefig(f'{save}Embedded_SHAP_values/{model_name}_{cell}_{feature_name}_feature_SHAP_cluster.svg', dpi = 600, transparent = True, bbox_inches = 'tight')
+    else:
+        if os.path.exists(f'{save}Embedded_Features/') == False:
+                os.makedirs(f'{save}Embedded_Features/', 0o666)
+        plt.savefig(f'{save}Embedded_Features/{model_name}_{cell}_{feature_name}_feature_cluster.svg', dpi = 600, transparent = True, bbox_inches = 'tight')
     plt.close()
 
-def plot_embedded(pipeline, save, feature_name = 'all', method = 'TSNE'):
+def plot_embedded(pipeline, save, size, feature_name = 'all', method = 'TSNE'):
     #Config
     cell = pipeline['Cell']
     model_name = pipeline['Model_Selection']['Best_Model']['Model_Name']
@@ -1188,8 +1230,10 @@ def plot_embedded(pipeline, save, feature_name = 'all', method = 'TSNE'):
                                 shap_values = shap_values.values,
                                 feature_names = input_params,
                                 method = projections,
+                                marker_size = size*5,
                                 alpha = 0.5,
                                 show = False)
+            plt.gcf().set_size_inches(size, size)
             plt.savefig(f'{save}{model_name}_{cell}_{feature_name}_{method}_shap.svg', dpi = 600, transparent = True, bbox_inches = 'tight')
             plt.close()
     else: 
@@ -1199,6 +1243,7 @@ def plot_embedded(pipeline, save, feature_name = 'all', method = 'TSNE'):
                     method = projections,
                     alpha = 0.5,
                     show = False)
+        plt.gcf().set_size_inches(size, size)
         plt.savefig(f'{save}{model_name}_{cell}_{feature_name}_{method}_shap.svg', dpi = 600, transparent = True, bbox_inches = 'tight')
         plt.close()
 

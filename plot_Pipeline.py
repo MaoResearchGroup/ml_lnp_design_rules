@@ -6,15 +6,15 @@ import os
 def main():
 
         #Specify which plots to make
-        manuscript             = True
+        manuscript             = False
         prelim                 = False
         plot_f_distribution    = False
         plot_model_selection   = False
         feature_reduction      = False
         run_learning_curve     = False
         redo_learning_curve    = False
-        run_SHAP_plots         = False
-        plot_bump              = True
+        run_SHAP_plots         = True
+        plot_bump              = False
 
 
         RUN_NAME  = f"Runs/Final_PDI1_RLU2/"
@@ -22,8 +22,8 @@ def main():
 
         cell_type_list = ['B16', 'HepG2', 'PC3', 'HEK293',  'N2a', 'ARPE19']
 
-        feature_plotting_order = ['Dlin-MC3+Helper lipid percentage',
-                                'Dlin-MC3_Helper lipid_ratio',
+        feature_plotting_order = ['Dlin-MC3_Helper lipid_ratio',
+                                  'Dlin-MC3+Helper lipid percentage',
                                 'Chol_DMG-PEG_ratio',
                                 'NP_ratio',
                                 'P_charged_centers', 
@@ -47,6 +47,7 @@ def main():
         
         #### MANUSCRIPT WIDE FIGURES/TABLES
         if manuscript:
+                #Get list of pipeline to compare results from
                 pipe_list = []
                 for c in cell_type_list:
                         #Import Pipeline of interest
@@ -58,7 +59,9 @@ def main():
                 if plot_f_distribution:
                         plotter.plot_tfxn_dist_comp(pipeline_list = pipe_list,
                                                         raw = True,
-                                                        save= manuscript_save_path)
+                                                        save= manuscript_save_path,
+                                                        new_order = ['HepG2', 'PC3', 'B16', 'HEK293',  'N2a', 'ARPE19'],
+                                                        pipe_order = cell_type_list)
                         plotter.tfxn_heatmap(pipeline_list=pipe_list,
                                         save=manuscript_save_path,
                                         helper_lipid=True)
@@ -99,12 +102,15 @@ def main():
                         if os.path.exists(prelim_save) == False:
                                 os.makedirs(prelim_save, 0o666)
 
+                        feature_list = pipeline_results['Data_preprocessing']['Input_Params'].copy()
+                        feature_list.insert(0, 'Transfection_Efficiency')
 
-                        plotter.tfxn_dist(pipeline = pipeline_results,
-                                          raw = True,
-                                          save = prelim_save)
-                        plotter.feature_distribution(pipeline = pipeline_results,
-                                             save = prelim_save)        
+                        for feature in feature_list:
+                                plotter.feature_dist(pipeline = pipeline_results,
+                                                  feature_name = feature,
+                                                  raw = True,
+                                                  save = prelim_save)
+   
                 #Plotting Model Selection Results
                 if plot_model_selection:
                         print('\n########## MODEL SELECTION PLOTTING')
@@ -147,14 +153,12 @@ def main():
                         #Beeswarm Summary Plot
                         plotter.plot_summary(pipeline = pipeline_results,
                                              cmap = 'viridis_r',
-                                             feature_order=True,
-                                             save = SHAP_save,
-                                             order = feature_plotting_order)
+                                             feature_order=feature_plotting_order,
+                                             save = SHAP_save)
                 
                         #Feature Importance
                         plotter.plot_importance(pipeline = pipeline_results,
-                                                feature_order=True,
-                                                order = feature_plotting_order,
+                                                feature_order=feature_plotting_order,
                                                 save = SHAP_save)
                         
                         #Embedded Colored by Feature Value
@@ -162,7 +166,7 @@ def main():
                         plotter.plot_SHAP_cluster(pipeline = pipeline_results,
                                              feature_name='Transfection Efficiency',
                                              cmap = 'Reds',
-                                             size = 3.5,
+                                             size = 2.5,
                                              save = SHAP_save,
                                              title = False)
                         #Formulation Features
@@ -170,19 +174,38 @@ def main():
                         plotter.plot_SHAP_cluster(pipeline = pipeline_results,
                                         feature_name='all',
                                         cmap = 'viridis_r',
-                                        size = 2,
+                                        size = 1.8,
                                         save = SHAP_save,
                                         title = False)
+                        ### EMBEDDED by SHAP VALUES
+                        #Formulation Features
+
+                        plotter.plot_SHAP_cluster(pipeline = pipeline_results,
+                                        feature_name='all',
+                                        cmap = 'cool',
+                                        size = 1.8,
+                                        save = SHAP_save,
+                                        shap_values = True,
+                                        title = False)
                 
-                        #Embedded Colored by SHAP Value
-                        plotter.plot_embedded(pipeline=pipeline_results, 
-                                        feature_name= 'all',
-                                        save = SHAP_save)
+                        # #Embedded Colored by SHAP Value
+                        # plotter.plot_embedded(pipeline=pipeline_results, 
+                        #                 feature_name= 'all',
+                        #                 size = 2,
+                        #                 save = SHAP_save)
 
                         #Plot dependence
                         plotter.plot_dependence(pipeline=pipeline_results,
-                                                feature_name = 'Dlin-MC3_Helper lipid_ratio',
-                                                interaction_feature= 'P_charged_centers',
+                                                feature_list = ['Dlin-MC3_Helper lipid_ratio', 
+                                                                'Dlin-MC3+Helper lipid percentage', 
+                                                                'Chol_DMG-PEG_ratio', 
+                                                                'cLogP', 
+                                                                'P_charged_centers'],
+                                                interaction_feature_list= ['Dlin-MC3_Helper lipid_ratio',
+                                                                           'Dlin-MC3+Helper lipid percentage', 
+                                                                           'Chol_DMG-PEG_ratio', 
+                                                                           'cLogP', 
+                                                                           'P_charged_centers'],
                                                 save = SHAP_save)
                         #Plot Interaction
                         plotter.plot_interaction(pipeline = pipeline_results,
