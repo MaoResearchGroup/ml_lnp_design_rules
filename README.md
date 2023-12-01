@@ -1,3 +1,3 @@
 # lnp-ml
-predictive models for lipid nanoparticle libraries
-BMES
+Machine Learning Pipeline to predict LNP transfection efficiency and Analyze formulation design rules
+
