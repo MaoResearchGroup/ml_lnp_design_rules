@@ -244,7 +244,7 @@ class NESTED_CV:
                                                              'Formulation_Index', 
                                                              'Experimental_Transfection',
                                                              'Predicted_Transfection'])
-        CV_dataset['Score_difference'] = abs(CV_dataset['Valid Score'] - CV_dataset['Test Score']) #Groupby dataframe model iterations that best fit the data (i.e., validitaion <= test)
+        CV_dataset['Score_difference'] = abs(CV_dataset['Valid Score'] - CV_dataset['Test Score']) #Groupby dataframe model iterations that best fit the data (i.e., minimize different between validitaion and test)
         CV_dataset.sort_values(by=['Score_difference', 'Test Score'], ascending=True, inplace=True) 
         CV_dataset = CV_dataset.reset_index(drop=True) # Reset index of dataframe
         print('Cross Validation Results', CV_dataset)
