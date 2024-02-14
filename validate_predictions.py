@@ -9,6 +9,7 @@ from itertools import chain, product
 from operator import truediv
 import os
 import utilities as util
+import matplotlib.pyplot as plt
 
 def init_validation_dict(pipeline, pipeline_save):
     print('\n\n########## INITIALIZING NEW VALIDATION DICT ##############\n\n')
@@ -63,6 +64,7 @@ def init_validation_dict(pipeline, pipeline_save):
                             'Analyze_validation': False
                             },
                         'Saving':{
+                            'RUN_NAME': RUN_NAME,
                             'Validation_set': validation_save_path,
                             'Figures': figure_save_path
                             },
@@ -153,8 +155,43 @@ def create_formulation_array(pipeline, formula_validation_array, remove_training
 
     return formulation_param_array
 
+def get_multiplex_list(validation, multiplex_list):
+    RUN_NAME = validation['Saving']['RUN_NAME']
+    list_of_validations = []
 
-def get_validation_list(pipeline, method:str = 'top_bot'):
+    for c in multiplex_list:
+        list_path =  f'{RUN_NAME}{c}/IV_Validation/Validation_dict.pkl'
+        with open(list_path, 'rb') as file:
+            temp_validation = pickle.load(file)
+        list_of_validations.append(copy(temp_validation['Validation_set']['final_selection']))
+
+    #concat together
+    df_multiplex_validation = pd.concat(list_of_validations, axis=0, ignore_index=True)
+
+    #get predicted values for multiplex set
+    predicted_multiplex,df_multiplex_validation['Normalized_y'],df_multiplex_validation['RLU_y'] = get_predictions(df_multiplex_validation[validation['Validation_set']['Input_parameters']], 
+                                                                    validation['Pipeline_load']['Model'],
+                                                                    validation['Pipeline_load']['scaler'])            
+    #sort by predicted values
+    df_multiplex_validation = df_multiplex_validation.sort_values(by='Normalized_y', ascending=True).reset_index(drop = True)
+
+    validation['Validation_set']['Multiplex_set'] = df_multiplex_validation
+
+    #save
+    save  = validation['Saving']['Validation_set']
+    df_multiplex_validation.to_excel(f'{save}Multiplex_Validation_set.xlsx', index = False)
+
+
+    #plot
+    plotter.plot_validation_predictions(cell = validation['Cell'],
+                                        validation_set=df_multiplex_validation,
+                                        palette = 'husl',
+                                        save = f'{save}Multiplex_Validation_bar.svg'
+                                        )
+    
+
+
+def create_validation_list(pipeline, method:str = 'top_bot'):
     
     #Extract data
     df_for_selection = pipeline['Validation_set']['Validation_array_predicted']
@@ -316,121 +353,132 @@ def main():
     
     ################ What parts of the pipeline to run ###############
     RUN_NAME  = f"Runs/Final_PDI1_RLU2/"
-    new_validation = True
+    new_validation = False
 
     #Parts to Run/Update
     run_validation_array            = False
-    run_validation_set_selection    = True
+    run_validation_set_selection    = False
+    run_multiplex_validation        = True #run to also include validate sets from other cells lines into the dataset (other cell lines must have been run before)
     run_comparison                  = False
+    
 
-   
-    c = 'B16'
-    
-    ########## Parameters for Validation set search #################
-    new_formula_parameters ={'NP_ratio' : [5,6,7,9,10,11],
-                    'Dlin-MC3_Helper lipid_ratio' : [4, 7, 25, 35, 65, 85, 135, 165],
-                    'Dlin-MC3+Helper lipid percentage': [25, 35, 45, 55, 65, 75], 
-                    'Chol_DMG-PEG_ratio': [40,70,250,350]}
-    
-    
-    
-    search_conditions = {'num_formulations': 5,
-                         'lipid_specific': False,
-                        'low_bound': 0.25,
-                        'high_bound': 0.95,
-                        'min_lipid' : 0,
-                        'min_Dlin_helper_ratio' : 2,
-                        'min_Dlin_helper_percent' : 2,
-                        'min_Chol_PEG' : 2,
-                        'min_NP_ratio' : 2}
-    
-    
-    #Load previous validation dictionary if exists
-    pipeline_path  = f'{RUN_NAME}{c}/IV_Validation/Validation_dict.pkl'
+    cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
+    multiplex_cell_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
 
 
-    if os.path.exists(pipeline_path) and new_validation == False:
-      print(f'\n\n########## LOADING PREVIOUS PIPELINE FOR {c} ##############\n\n')
-      with open(pipeline_path, 'rb') as file:
-        validation = pickle.load(file)
-    
-    #Initialize new pipeline if wanted
-    else: 
-        #Load Pipeline of interest
-        with open(RUN_NAME + f'{c}/Pipeline_dict.pkl', 'rb') as file:
-                                    ML_pipeline = pickle.load(file)
-
-
-        #Initialize validation dict
-        validation = init_validation_dict(pipeline= ML_pipeline, 
-                                          pipeline_save = pipeline_path)
+    for c in cell_type_list:
+        ########## Parameters for Validation set search #################
+        new_formula_parameters ={'NP_ratio' : [5,6,7,9,10,11],
+                        'Dlin-MC3_Helper lipid_ratio' : [4, 7, 25, 35, 65, 85, 135, 165],
+                        'Dlin-MC3+Helper lipid percentage': [25, 35, 45, 55, 65, 75], 
+                        'Chol_DMG-PEG_ratio': [40,70,250,350]}
         
         
-        #Run everything except experimental comparison
-        run_validation_array            = True
-        run_validation_set_selection    = True
-        run_comparison                  = False
-
-        util.save_pipeline(pipeline=validation, path = pipeline_path, 
-                step = 'DICTIONARY INITIALIZED')
-
-
-    if run_validation_array:
-        #Create array for validation set selection
-        validation_array = create_formulation_array(pipeline = validation, 
-                                                    formula_validation_array= new_formula_parameters,
-                                                    remove_training=True)
         
-        #Predict Values for validation array
-        validation_input_params = validation['Validation_set']['Input_parameters']
-        validation['Validation_set']['array_y_pred'],_,_ = get_predictions(validation_array[validation_input_params], 
-                                                                        validation['Pipeline_load']['Model'],
-                                                                        validation['Pipeline_load']['scaler'])
-
-        validation['Validation_set']['Validation_array_predicted'] = pd.concat([validation['Validation_set']['Validation_array'], 
-                                                                                validation['Validation_set']['array_y_pred']], axis = 1)
+        search_conditions = {'num_formulations': 5,
+                            'lipid_specific': False,
+                            'low_bound': 0.20,
+                            'high_bound': 0.98,
+                            'min_lipid' : 0,
+                            'min_Dlin_helper_ratio' : 2,
+                            'min_Dlin_helper_percent' : 2,
+                            'min_Chol_PEG' : 2,
+                            'min_NP_ratio' : 2}
         
-        util.save_pipeline(pipeline=validation, path = pipeline_path, 
-            step = 'Validation array generation')
         
-    if run_validation_set_selection:
-        #Select formulations for experimental validation
-        validation['Validation_set']['Search_conditions'] = search_conditions
-        validation_list = get_validation_list(validation, method = 'top_bot')
+        #Load previous validation dictionary if exists
+        pipeline_path  = f'{RUN_NAME}{c}/IV_Validation/Validation_dict.pkl'
 
-        #Plot
-        util.save_pipeline(pipeline=validation, path = pipeline_path, 
-            step = 'Validation set selected')
- 
-    ######## Compare Validation Results########## 
-    if run_comparison:
-        validation_path = RUN_NAME + "In_Vitro_Validation/"
-        validation_df = pd.read_csv(validation_path +"In_Vitro_Validation_List.csv")
 
-        X_test = validation_df[input_params]
+        if os.path.exists(pipeline_path) and new_validation == False:
+            print(f'\n\n########## LOADING PREVIOUS PIPELINE FOR {c} ##############\n\n')
+            with open(pipeline_path, 'rb') as file:
+                validation = pickle.load(file)
         
-        y_test = validation_df[prefix + cell].to_numpy()
+        #Initialize new pipeline if wanted
+        else: 
+            #Load Pipeline of interest
+            with open(RUN_NAME + f'{c}/Pipeline_dict.pkl', 'rb') as file:
+                                        ML_pipeline = pickle.load(file)
 
-        y_test = scaler.transform(y_test.reshape(-1,1))
 
-        y_test = list(chain(*y_test))
-        #Get Predictions
-        y_pred, converted_y_pred = get_predictions(X= X_test, 
-                                                model = trained_model, 
-                                                scaler=scaler)
+            #Initialize validation dict
+            validation = init_validation_dict(pipeline= ML_pipeline, 
+                                            pipeline_save = pipeline_path)
+            
+            
+            #Run everything except experimental comparison
+            run_validation_array            = True
+            run_validation_set_selection    = True
+            run_multiplex_validation        = False
+            run_comparison                  = False
 
-        df_pred =  pd.DataFrame(y_pred, columns = ['Normalized Predicted'])
-        df_test = pd.DataFrame(y_test, columns = ['Normalized Experimental'])
+            util.save_pipeline(pipeline=validation, path = pipeline_path, 
+                    step = 'DICTIONARY INITIALIZED')
 
-        #Calculate MAE
-        MAE = mean_absolute_error(y_pred,y_test)
-        print(f'Prediction MAE = {MAE}')
 
-        #Plot
-        plotter.plot_predictions(pipeline=pipeline,
-                                save =validation_path,
-                                pred = y_pred,
-                                exp = y_test)
+        if run_validation_array:
+            #Create array for validation set selection
+            validation_array = create_formulation_array(pipeline = validation, 
+                                                        formula_validation_array= new_formula_parameters,
+                                                        remove_training=True)
+            
+            #Predict Values for validation array
+            validation_input_params = validation['Validation_set']['Input_parameters']
+            validation['Validation_set']['array_y_pred'],_,_ = get_predictions(validation_array[validation_input_params], 
+                                                                            validation['Pipeline_load']['Model'],
+                                                                            validation['Pipeline_load']['scaler'])
+
+            validation['Validation_set']['Validation_array_predicted'] = pd.concat([validation['Validation_set']['Validation_array'], 
+                                                                                    validation['Validation_set']['array_y_pred']], axis = 1)
+            
+            util.save_pipeline(pipeline=validation, path = pipeline_path, 
+                step = 'Validation array generation')
+            
+        if run_validation_set_selection:
+            #Select formulations for experimental validation
+            validation['Validation_set']['Search_conditions'] = search_conditions
+            validation_list = create_validation_list(validation, method = 'top_bot')
+
+            #Plot
+            util.save_pipeline(pipeline=validation, path = pipeline_path, 
+                step = 'Validation set selected')
+    
+        if run_multiplex_validation:
+            get_multiplex_list(validation=validation, 
+                               multiplex_list=multiplex_cell_list)
+                
+
+
+        ######## Compare Validation Results########## 
+        if run_comparison:
+            validation_path = RUN_NAME + "In_Vitro_Validation/"
+            validation_df = pd.read_csv(validation_path +"In_Vitro_Validation_List.csv")
+
+            X_test = validation_df[input_params]
+            
+            y_test = validation_df[prefix + cell].to_numpy()
+
+            y_test = scaler.transform(y_test.reshape(-1,1))
+
+            y_test = list(chain(*y_test))
+            #Get Predictions
+            y_pred, converted_y_pred = get_predictions(X= X_test, 
+                                                    model = trained_model, 
+                                                    scaler=scaler)
+
+            df_pred =  pd.DataFrame(y_pred, columns = ['Normalized Predicted'])
+            df_test = pd.DataFrame(y_test, columns = ['Normalized Experimental'])
+
+            #Calculate MAE
+            MAE = mean_absolute_error(y_pred,y_test)
+            print(f'Prediction MAE = {MAE}')
+
+            #Plot
+            plotter.plot_predictions(pipeline=pipeline,
+                                    save =validation_path,
+                                    pred = y_pred,
+                                    exp = y_test)
     
 if __name__ == "__main__":
     main()

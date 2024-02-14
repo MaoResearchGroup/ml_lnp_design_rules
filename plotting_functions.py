@@ -10,7 +10,7 @@ from matplotlib.ticker import MultipleLocator
 from utilities import get_spearman, extract_training_data, run_tukey, extraction_all
 from sklearn.decomposition import PCA
 from sklearn.model_selection import KFold
-import copy
+from copy import deepcopy, copy
 from sklearn.model_selection import learning_curve
 import time
 import shap
@@ -1411,3 +1411,56 @@ def add_widths(x, y, width=0.1):
         new_x += [i-width, i, i+width]
         new_y += [j, j, j]
     return new_x, new_y
+
+
+
+############## IV VALIDATION ##############
+def plot_validation_predictions(cell, validation_set, palette, save):
+    data = copy(validation_set)
+    data = data.reset_index()
+
+    #Config Plot
+    sns.set_theme(font='Arial', font_scale= 2)
+    plt.rcParams['font.family'] = 'Arial'
+    plt.rcParams['font.size'] = 12
+
+    #Plot
+    fig = plt.figure(figsize=(5,4))
+    cmap = sns.color_palette("hls", 8, as_cmap=False)
+    bar = sns.barplot(
+        data=data, 
+        y="Normalized_y",
+        x = 'index',
+        hue = 'Helper_lipid',
+        palette= palette,
+        alpha = 0.8,
+        dodge=False)
+    # Add borders to bars
+    for patch in bar.patches:
+        patch.set_edgecolor('black')
+        patch.set_linewidth(1)
+
+
+    #Labels
+    plt.ylabel('Predicted Transfection', fontsize = 12)
+    plt.xlabel('Formulation Number',fontsize = 12)
+    
+    #Ticks
+    bar.tick_params(colors='black', which='both')
+    bar.tick_params(bottom=True, left=True)
+    bar.axes.yaxis.label.set_color('black')
+    bar.axes.xaxis.label.set_color('black')
+
+
+    bar.set_yticklabels(bar.get_yticklabels(), fontsize = 12)
+    bar.set_xticklabels(bar.get_xticklabels(), fontsize = 12)
+
+    bar.spines['left'].set_color('black')
+    bar.spines['bottom'].set_color('black')
+    bar.spines['right'].set_visible(False)
+    bar.spines['top'].set_visible(False)
+
+    plt.grid(False)
+    plt.savefig(save, dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
+    plt.show()
+    plt.close()
