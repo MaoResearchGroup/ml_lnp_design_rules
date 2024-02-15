@@ -1450,15 +1450,34 @@ def plot_validation_predictions(cell, validation_set, palette, save):
     bar.tick_params(bottom=True, left=True)
     bar.axes.yaxis.label.set_color('black')
     bar.axes.xaxis.label.set_color('black')
-
-
-    bar.set_yticklabels(bar.get_yticklabels(), fontsize = 12)
+   
+    bar.xaxis.set_major_locator(MultipleLocator(10))
     bar.set_xticklabels(bar.get_xticklabels(), fontsize = 12)
+    bar.set_yticklabels(bar.get_yticklabels(), fontsize = 12)
 
+
+    #spines
     bar.spines['left'].set_color('black')
     bar.spines['bottom'].set_color('black')
     bar.spines['right'].set_visible(False)
     bar.spines['top'].set_visible(False)
+
+
+    #adjust legend
+    legend = bar.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2), ncol=3, 
+                 frameon=False, fontsize = '12')
+    plt.setp(legend.get_texts(), fontsize='12')  # for legend text
+    plt.setp(legend.get_patches(), linewidth=0, width=12)  # for legend markers 
+
+
+
+
+    # sns.move_legend(
+    #                 bar, "lower center",
+    #                 bbox_to_anchor=(0.5, 1), 
+    #                 ncol=3,
+    #                 title='Helper Lipid', 
+    #                 frameon=False)
 
     plt.grid(False)
     plt.savefig(save, dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
