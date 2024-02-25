@@ -376,27 +376,38 @@ def plot_AE_Box(pipeline, save):
     plt.close()
 
 
-def plot_predictions(pipeline, save, pred = None, exp = None):
+def plot_predictions(pipeline, save, pred = None, exp = None, normalized = True, model_name = None, correlations = True):
     
     ######### Hold Out Validation Pred vs Exp. Plots ########
     cell = pipeline['Cell']
-    model_name = pipeline['Model_Selection']['Best_Model']['Model_Name']
-    data = pipeline['Model_Selection']['Best_Model']['Predictions']
+
 
     if pred is None and exp is None:
         #Get Predictions
+        model_name = pipeline['Model_Selection']['Best_Model']['Model_Name']
+        data = pipeline['Model_Selection']['Best_Model']['Predictions']
+
+
         experimental = data['Experimental_Transfection']
         predicted = data['Predicted_Transfection']
-        lower_lim = -0.05
-        upper_lim = 1.05
+
+        if normalized:
+            lower_lim = -0.05
+            upper_lim = 1.05
+        else:
+            lower_lim = None
+            upper_lim = None
     else:
         experimental = exp
         predicted = pred
-        lower_lim = -0.05
-        upper_lim = 1.15
-    #Calculate correlations
-    pearsons = stats.pearsonr(predicted, experimental)
-    spearman = stats.spearmanr(predicted, experimental)
+        if normalized:
+            lower_lim = -0.05
+            upper_lim = 1.15
+        else:
+            lower_lim = None
+            upper_lim = None
+
+
 
 
     #Config Plot
@@ -415,14 +426,20 @@ def plot_predictions(pipeline, save, pred = None, exp = None):
                         line_kws={"color": "black", "linestyle":'--'})
 
     #Annotate with correlations
-    plt.annotate('Pearsons r = {:.2f}'.format(pearsons[0]), xy=(0.1, 0.9), xycoords='axes fraction')
-    plt.annotate('Spearmans r = {:.2f}'.format(spearman[0]), xy=(0.1, 0.8), xycoords='axes fraction')
 
+    if correlations:
+        pearsons = stats.pearsonr(predicted, experimental)
+        spearman = stats.spearmanr(predicted, experimental)
+
+        plt.annotate('Pearsons r = {:.2f}'.format(pearsons[0]), xy=(0.1, 0.9), xycoords='axes fraction')
+        plt.annotate('Spearmans r = {:.2f}'.format(spearman[0]), xy=(0.1, 0.8), xycoords='axes fraction')
 
     #Labels
     plt.ylabel('Predicted Transfection', fontsize = 12)
     plt.xlabel('Experimental Transfection',fontsize = 12)
-    reg.set(xlim=(lower_lim, upper_lim), xticks=np.linspace(0,1,5), ylim=(lower_lim, upper_lim), yticks=np.linspace(0,1,5))
+
+    if normalized:
+        reg.set(xlim=(lower_lim, upper_lim), xticks=np.linspace(0,1,5), ylim=(lower_lim, upper_lim), yticks=np.linspace(0,1,5))
     
     #Ticks
     reg.tick_params(colors='black', which='both')
