@@ -169,15 +169,21 @@ class NESTED_CV:
         self.pred_list = []
 
 
-        cv_outer = KFold(n_splits=NUM_TRIALS, random_state= 4, shuffle=True)
-        for i, (train_index, test_index) in enumerate(cv_outer.split(self.X)):
+        # Split CV loop model development set and final test set
+        self.X_cv_loop, self.X_final_test, self.y_cv_loop, self.y_final_test = train_test_split(self.X, self.Y, test_size= 0.15, random_state= 42, shuffle= True)
+          
+        # Nested CV
+        cv_outer = KFold(n_splits = NUM_TRIALS , random_state= i, shuffle=True) # Kfold split of the developemnt dataset
+
+
+        for i, (train_index, test_index) in enumerate(cv_outer.split(self.X_cv_loop)):
   
-          # #X = input parameters, y = transfection, F = formulation number
+          #X = input parameters, y = transfection, F = formulation number
           #X_train, X_test, y_train, y_test, F_train, F_test = train_test_split(self.X, self.Y, self.F, test_size=0.2, random_state= i) #Iterate through different random_state to randomize test_train split
-          X_train = self.X.iloc[train_index].copy()
-          X_test = self.X.iloc[test_index].copy()
-          y_train = self.Y.iloc[train_index].copy()
-          y_test = self.Y.iloc[test_index].copy()
+          X_train = self.X_cv_loop.iloc[train_index].copy()
+          X_test = self.X_cv_loop.iloc[test_index].copy()
+          y_train = self.y_cv_loop.iloc[train_index].copy()
+          y_test = self.y_cv_loop.iloc[test_index].copy()
           F_train = self.F.iloc[train_index].copy()
           F_test = self.F.iloc[test_index].copy()
 
@@ -188,7 +194,7 @@ class NESTED_CV:
           self.y_test_list.append(y_test)
                 
           # configure the cross-validation procedure - inner loop (validation set/HP optimization)
-          cv_inner = KFold(n_splits = 4, shuffle = True) #4 splits to make 80% train set into 60%-20% train-validation
+          cv_inner = KFold(n_splits = 10, shuffle = True) #4 splits to make 60% train set into 60%-20% train-validation
 
           # define search space
           search = RSCV(self.user_defined_model, self.p_grid, n_iter=100, verbose=0, scoring='neg_mean_absolute_error', cv=cv_inner,  n_jobs= 6, refit=True)
@@ -262,7 +268,7 @@ class NESTED_CV:
         self.best_model = best_model.fit(self.X, y_train) #Fit hyperparameter optimized model using all data as training set.
 
     
-    ###### Retrain best model across 5 datasplits to evaluate the overall MAE
+    ###### Retrain model using best parameters across 5 datasplits to evaluate the overall MAE
     def overall_MAE(self, N_CV):
         #Initialize model with best hyperparameters
         self.best_model_params = self.CV_dataset.iloc[0,5]

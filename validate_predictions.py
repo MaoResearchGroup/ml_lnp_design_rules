@@ -163,10 +163,14 @@ def get_multiplex_list(validation, multiplex_list):
         list_path =  f'{RUN_NAME}{c}/IV_Validation/Validation_dict.pkl'
         with open(list_path, 'rb') as file:
             temp_validation = pickle.load(file)
-        list_of_validations.append(copy(temp_validation['Validation_set']['final_selection']))
+        #Add source to each df
+        selection = copy(temp_validation['Validation_set']['final_selection'])
+        selection['Source_cell'] = c
+        list_of_validations.append(selection)
 
     #concat together
     df_multiplex_validation = pd.concat(list_of_validations, axis=0, ignore_index=True)
+
 
     #get predicted values for multiplex set
     predicted_multiplex,df_multiplex_validation['Normalized_y'],df_multiplex_validation['RLU_y'] = get_predictions(df_multiplex_validation[validation['Validation_set']['Input_parameters']], 
@@ -348,7 +352,25 @@ def get_top_bot_validation_list(df, selection_args):
     return formulation_list, high_formulations, low_formulations
 
 ############################################### MAIN ##############################################################
+def import_and_plot_validation_list(pipeline, path):
+    df = pd.read_excel(path)
 
+    #get predicted values for multiplex set
+    _,df['Normalized_y'],df['RLU_y'] = get_predictions(df[pipeline['Validation_set']['Input_parameters']], 
+                                                                    pipeline['Pipeline_load']['Model'],
+                                                                    pipeline['Pipeline_load']['scaler'])            
+    #sort by predicted values
+    df_sorted = df.sort_values(by='Normalized_y', ascending=True).reset_index(drop = True)
+
+
+    #plot
+    save  = pipeline['Saving']['Validation_set']
+    plotter.plot_validation_predictions(cell = pipeline['Cell'],
+                                        validation_set=df_sorted,
+                                        palette = 'husl',
+                                        save = f'{save}Imported_Validation_bar.svg')
+
+    return df
 def main():
     
     ################ What parts of the pipeline to run ###############
@@ -358,8 +380,11 @@ def main():
     #Parts to Run/Update
     run_validation_array            = False
     run_validation_set_selection    = False
-    run_multiplex_validation        = True #run to also include validate sets from other cells lines into the dataset (other cell lines must have been run before)
-    run_comparison                  = False
+    run_multiplex_validation        = False #run to also include validate sets from other cells lines into the dataset (other cell lines must have been run before)
+    
+    import_validation               = True
+    run_comparison                  = True
+
     
 
     cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
@@ -369,15 +394,15 @@ def main():
     for c in cell_type_list:
         ########## Parameters for Validation set search #################
         new_formula_parameters ={'NP_ratio' : [5,6,7,9,10,11],
-                        'Dlin-MC3_Helper lipid_ratio' : [4, 7, 25, 35, 65, 85, 135, 165],
-                        'Dlin-MC3+Helper lipid percentage': [25, 35, 45, 55, 65, 75], 
-                        'Chol_DMG-PEG_ratio': [40,70,250,350]}
+                        'Dlin-MC3_Helper lipid_ratio' : [2, 3, 4, 5, 6, 7, 8, 9, 20, 30, 40, 60, 70, 80, 90, 120, 140, 160, 180],
+                        'Dlin-MC3+Helper lipid percentage': [25, 30, 35, 45, 50, 55, 65, 70, 75], 
+                        'Chol_DMG-PEG_ratio': [20, 30, 40, 50, 60,70,80, 90, 150, 200, 250,350, 400, 450]}
         
         
         
-        search_conditions = {'num_formulations': 5,
+        search_conditions = {'num_formulations': 6,
                             'lipid_specific': False,
-                            'low_bound': 0.20,
+                            'low_bound': 0.10,
                             'high_bound': 0.98,
                             'min_lipid' : 0,
                             'min_Dlin_helper_ratio' : 2,
@@ -448,37 +473,35 @@ def main():
             get_multiplex_list(validation=validation, 
                                multiplex_list=multiplex_cell_list)
                 
-
+        if import_validation:
+            pred_df = import_and_plot_validation_list(validation, path  = f"{RUN_NAME}{c}/IV_Validation/Import_validation.xlsx")
+            print(pred_df)
 
         ######## Compare Validation Results########## 
         if run_comparison:
-            validation_path = RUN_NAME + "In_Vitro_Validation/"
-            validation_df = pd.read_csv(validation_path +"In_Vitro_Validation_List.csv")
+            validation_path = f"{RUN_NAME}{c}/IV_Validation/"
+            exp_df = pd.read_excel(validation_path +"Import_validation.xlsx")
 
-            X_test = validation_df[input_params]
+            y_pred = pred_df['RLU_y']
+
+            y_test = exp_df['Exp_RLU']
+
+
+            print(y_pred)
+            print(y_test)
+
+
+            #Plot
+            plotter.plot_predictions(pipeline=validation,
+                                    save =validation_path,
+                                    pred = y_pred,
+                                    exp = y_test,
+                                    normalized=False,
+                                    correlations=False)
             
-            y_test = validation_df[prefix + cell].to_numpy()
-
-            y_test = scaler.transform(y_test.reshape(-1,1))
-
-            y_test = list(chain(*y_test))
-            #Get Predictions
-            y_pred, converted_y_pred = get_predictions(X= X_test, 
-                                                    model = trained_model, 
-                                                    scaler=scaler)
-
-            df_pred =  pd.DataFrame(y_pred, columns = ['Normalized Predicted'])
-            df_test = pd.DataFrame(y_test, columns = ['Normalized Experimental'])
-
             #Calculate MAE
             MAE = mean_absolute_error(y_pred,y_test)
             print(f'Prediction MAE = {MAE}')
-
-            #Plot
-            plotter.plot_predictions(pipeline=pipeline,
-                                    save =validation_path,
-                                    pred = y_pred,
-                                    exp = y_test)
     
 if __name__ == "__main__":
     main()
