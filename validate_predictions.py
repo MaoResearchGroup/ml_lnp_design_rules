@@ -356,7 +356,11 @@ def import_and_plot_validation_list(pipeline, path):
     df = pd.read_excel(path)
 
     #get predicted values for multiplex set
-    _,df['Normalized_y'],df['RLU_y'] = get_predictions(df[pipeline['Validation_set']['Input_parameters']], 
+    input_params = copy(pipeline['Validation_set']['Input_parameters'])
+
+
+    print(f"USED THE FOLLOWING PARAMETERS FOR PREDICTIONS: {input_params}")
+    _,df['Normalized_y'],df['RLU_y'] = get_predictions(df[input_params], 
                                                                     pipeline['Pipeline_load']['Model'],
                                                                     pipeline['Pipeline_load']['scaler'])            
     #sort by predicted values
@@ -374,9 +378,8 @@ def import_and_plot_validation_list(pipeline, path):
 def main():
     
     ################ What parts of the pipeline to run ###############
-    RUN_NAME  = f"Runs/Final_PDI1_RLU2/"
-    new_validation = False
-
+    RUN_NAME  = f"Runs/Percentage_PDI1_RLU2_lipid_na_wt/"
+    new_validation = True
     #Parts to Run/Update
     run_validation_array            = False
     run_validation_set_selection    = False
@@ -386,17 +389,23 @@ def main():
     run_comparison                  = True
 
     
-
-    cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
+    cell_type_list = ['HepG2']
+    # cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
     multiplex_cell_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
 
 
     for c in cell_type_list:
         ########## Parameters for Validation set search #################
+        # new_formula_parameters ={'NP_ratio' : [5,6,7,9,10,11],
+        #                 'Dlin-MC3_Helper lipid_ratio' : [2, 3, 4, 5, 6, 7, 8, 9, 20, 30, 40, 60, 70, 80, 90, 120, 140, 160, 180],
+        #                 'Dlin-MC3+Helper lipid percentage': [25, 30, 35, 45, 50, 55, 65, 70, 75], 
+        #                 'Chol_DMG-PEG_ratio': [20, 30, 40, 50, 60,70,80, 90, 150, 200, 250,350, 400, 450]}
+        
+
         new_formula_parameters ={'NP_ratio' : [5,6,7,9,10,11],
-                        'Dlin-MC3_Helper lipid_ratio' : [2, 3, 4, 5, 6, 7, 8, 9, 20, 30, 40, 60, 70, 80, 90, 120, 140, 160, 180],
-                        'Dlin-MC3+Helper lipid percentage': [25, 30, 35, 45, 50, 55, 65, 70, 75], 
-                        'Chol_DMG-PEG_ratio': [20, 30, 40, 50, 60,70,80, 90, 150, 200, 250,350, 400, 450]}
+                        '(IL+HL)' : [2, 3, 4, 5, 6, 7, 8, 9, 20, 30, 40, 60, 70, 80, 90, 120, 140, 160, 180],
+                        'HL_(IL+HL)': [25, 30, 35, 45, 50, 55, 65, 70, 75], 
+                        'PEG_(Chol+PEG)': [20, 30, 40, 50, 60,70,80, 90, 150, 200, 250,350, 400, 450]}
         
         
         
@@ -433,10 +442,11 @@ def main():
             
             
             #Run everything except experimental comparison
-            run_validation_array            = True
-            run_validation_set_selection    = True
+            run_validation_array            = False
+            run_validation_set_selection    = False
             run_multiplex_validation        = False
-            run_comparison                  = False
+            import_validation               = True
+            run_comparison                  = True
 
             util.save_pipeline(pipeline=validation, path = pipeline_path, 
                     step = 'DICTIONARY INITIALIZED')
@@ -475,7 +485,6 @@ def main():
                 
         if import_validation:
             pred_df = import_and_plot_validation_list(validation, path  = f"{RUN_NAME}{c}/IV_Validation/Import_validation.xlsx")
-            print(pred_df)
 
         ######## Compare Validation Results########## 
         if run_comparison:
@@ -487,17 +496,13 @@ def main():
             y_test = exp_df['Exp_RLU']
 
 
-            print(y_pred)
-            print(y_test)
-
-
             #Plot
             plotter.plot_predictions(pipeline=validation,
                                     save =validation_path,
                                     pred = y_pred,
                                     exp = y_test,
                                     normalized=False,
-                                    correlations=False)
+                                    correlations=True)
             
             #Calculate MAE
             MAE = mean_absolute_error(y_pred,y_test)

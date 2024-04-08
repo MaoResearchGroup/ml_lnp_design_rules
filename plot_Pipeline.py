@@ -1,7 +1,8 @@
 import pickle
-from utilities import save_pipeline
+from utilities import save_pipeline, truncate_colormap
 import plotting_functions as plotter
 import os
+import matplotlib as plt
 
 def main():
 
@@ -11,21 +12,25 @@ def main():
         plot_f_distribution    = False
         plot_model_selection   = False
         feature_reduction      = False
+        straw_model            = True
         run_learning_curve     = False
         redo_learning_curve    = False
-        run_SHAP_plots         = True
+        run_SHAP_plots         = False
         plot_bump              = False
 
 
-        RUN_NAME  = f"Runs/Final_PDI1_RLU2/"
+        RUN_NAME  = f"Runs/Percentage_PDI1_RLU2_Final/"
 
-
+        # cell_type_list = ['N2a']
         cell_type_list = ['B16', 'HepG2', 'PC3', 'HEK293',  'N2a', 'ARPE19']
 
-        feature_plotting_order = ['Dlin-MC3_Helper lipid_ratio',
-                                  'Dlin-MC3+Helper lipid percentage',
-                                'Chol_DMG-PEG_ratio',
+        shap_cmap = truncate_colormap(plt.cm.get_cmap('Greens'), 0.2, 0.8)
+        
+        feature_plotting_order = ['HL_(IL+HL)',
+                                  '(IL+HL)',
+                                'PEG_(Chol+PEG)',
                                 'NP_ratio',
+                                'Lipid_NA_ratio', ############
                                 'P_charged_centers', 
                                 'N_charged_centers', 
                                 'cLogP', 
@@ -36,7 +41,25 @@ def main():
                                 'Size', 
                                 'PDI', 
                                 'Zeta']
+        
+        # feature_plotting_order = ['Dlin-MC3_Helper lipid_ratio',
+        #                           'Dlin-MC3+Helper lipid percentage',
+        #                         'Chol_DMG-PEG_ratio',
+        #                         'NP_ratio',
+        #                         'P_charged_centers', 
+        #                         'N_charged_centers', 
+        #                         'cLogP', 
+        #                         'Hbond_D', 
+        #                         'Hbond_A', 
+        #                         'Total_Carbon_Tails', 
+        #                         'Double_bonds',
+        #                         'Size', 
+        #                         'PDI', 
+        #                         'Zeta']
+
         manuscript_save_path = RUN_NAME + 'Manuscript_Figures/'
+
+
         if not os.path.exists(manuscript_save_path):
                 # Create the directory if it doesn't exist
                 os.makedirs( manuscript_save_path)
@@ -120,7 +143,7 @@ def main():
                                 os.makedirs(model_selection_save, 0o666)
                         
 
-                        plotter.plot_AE_Box(pipeline_results, model_selection_save)
+                        plotter.plot_AE_Box(pipeline_results, model_selection_save, loop= 'test')
                         plotter.plot_predictions(pipeline_results, model_selection_save)
                         
 
@@ -129,7 +152,9 @@ def main():
                         print('\n########## FEATURE REDUCTION PLOTTING')
                         plotter.plot_feature_reduction(pipeline_results)
                         
-
+                if straw_model:
+                        print('\n########## STRAW MODEL PLOTTING')
+                        plotter.plot_straw_model(pipeline_results)
                 # Learning Curve 
                 if run_learning_curve:
                         print('\n########## LEARNING CURVE PLOTTING')
@@ -152,13 +177,15 @@ def main():
 
                         #Beeswarm Summary Plot
                         plotter.plot_summary(pipeline = pipeline_results,
-                                             cmap = 'viridis_r',
-                                             feature_order=feature_plotting_order,
+                                             cmap = shap_cmap,
+                                        #      feature_order=feature_plotting_order,
+                                                feature_order=None,
                                              save = SHAP_save)
                 
                         #Feature Importance
                         plotter.plot_importance(pipeline = pipeline_results,
-                                                feature_order=feature_plotting_order,
+                                                # feature_order=feature_plotting_order,
+                                                feature_order=None,
                                                 save = SHAP_save)
                         
                         #Embedded Colored by Feature Value
@@ -180,13 +207,13 @@ def main():
                         ### EMBEDDED by SHAP VALUES
                         #Formulation Features
 
-                        plotter.plot_SHAP_cluster(pipeline = pipeline_results,
-                                        feature_name='all',
-                                        cmap = 'cool',
-                                        size = 1.8,
-                                        save = SHAP_save,
-                                        shap_values = True,
-                                        title = False)
+                        # plotter.plot_SHAP_cluster(pipeline = pipeline_results,
+                        #                 feature_name='all',
+                        #                 cmap = 'cool',
+                        #                 size = 1.8,
+                        #                 save = SHAP_save,
+                        #                 shap_values = True,
+                        #                 title = False)
                 
                         # #Embedded Colored by SHAP Value
                         # plotter.plot_embedded(pipeline=pipeline_results, 
@@ -195,22 +222,19 @@ def main():
                         #                 save = SHAP_save)
 
                         #Plot dependence
-                        plotter.plot_dependence(pipeline=pipeline_results,
-                                                feature_list = ['Dlin-MC3_Helper lipid_ratio', 
-                                                                'Dlin-MC3+Helper lipid percentage', 
-                                                                'Chol_DMG-PEG_ratio', 
-                                                                'cLogP', 
-                                                                'P_charged_centers'],
-                                                interaction_feature_list= ['Dlin-MC3_Helper lipid_ratio',
-                                                                           'Dlin-MC3+Helper lipid percentage', 
-                                                                           'Chol_DMG-PEG_ratio', 
-                                                                           'cLogP', 
-                                                                           'P_charged_centers'],
-                                                save = SHAP_save)
-                        #Plot Interaction
-                        plotter.plot_interaction(pipeline = pipeline_results,
-                                                 cmap = 'viridis_r',
-                                                 save = SHAP_save)
+                        # plotter.plot_dependence(pipeline=pipeline_results,
+                        #                         feature_list = ['HL_(IL+HL)', 
+                        #                                         '(IL+HL)', 
+                        #                                         'PEG_(Chol+PEG)', 
+                        #                                         'P_charged_centers'],
+                        #                         interaction_feature_list= ['HL_(IL+HL)', 
+                        #                                                 '(IL+HL)', 
+                        #                                                    'P_charged_centers'],
+                        #                         save = SHAP_save)
+                        # #Plot Interaction
+                        # plotter.plot_interaction(pipeline = pipeline_results,
+                        #                          cmap = 'viridis_r',
+                        #                          save = SHAP_save)
                         
                         #Radar/Rose Plots
                         plotter.plot_Radar(pipeline= pipeline_results,

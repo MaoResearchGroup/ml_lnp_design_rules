@@ -240,12 +240,6 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats):
                             pearson, pear_std,
                             predictions, experimental,
                             n/N_features]
- 
-            # # Only append new reduction data if sucessful
-            # MAE_list.append(np.mean(acc_results)) # append average MAE value to empty list
-            # MAE_std_list.append(np.std(acc_results))
-            # spear_list.append(spearman_results)
-            # pear_list.append(pearson_results)
         else:
             print(f'\n{feature} WAS NOT REMOVED \n') 
         iteration +=1

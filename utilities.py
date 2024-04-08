@@ -6,18 +6,20 @@ from scipy.stats import spearmanr
 import pickle
 from matplotlib import colors
 import os
+from copy import copy, deepcopy
 
-def init_pipeline(pipeline_path, RUN_NAME, cell, ratiometric, data_file_path, size_cutoff, PDI_cutoff,prefix, RLU_floor,N_CV, model_list ):
+def init_pipeline(pipeline_path, RUN_NAME, cell, param_type, data_file_path, size_cutoff, PDI_cutoff,prefix, RLU_floor,N_CV, model_list ):
     
     print('\n\n########## INITIALIZING NEW PIPELINE ##############\n\n')
     #Saving/Loading
     model_save_path           = f"{RUN_NAME}{cell}/Trained_Models/" # Where to save model, results, and training data 
     refined_model_save_path   = f"{RUN_NAME}{cell}/Feature_Reduction/" #where to save refined model and results
     shap_value_save_path      = f'{RUN_NAME}{cell}/SHAP_Values/'
+    straw_save_path           = f'{RUN_NAME}{cell}/Straw_Models/'
     figure_save_path          = f"{RUN_NAME}{cell}/Figures/" #where to save figures
     
     #Input_Params
-    input_param_names = select_input_params(cell = cell, ratio = ratiometric)
+    input_param_names = select_input_params(cell = cell, method = param_type)
     print(f"INITIAL INPUT PARAMS: {input_param_names}")
     
     #initialize Pipeline Config and Data Storage Dictionary
@@ -26,6 +28,7 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, ratiometric, data_file_path, si
                         'Preprocessing': False,
                         'Model_Selection': False,
                         'Feature_Reduction': False,
+                        'Straw_Model': False,
                         'SHAP': False,
                         'Learning_Curve': False
                         },
@@ -33,12 +36,13 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, ratiometric, data_file_path, si
                         'RUN_NAME': RUN_NAME,
                         'Models': model_save_path,
                         'Refined_Models': refined_model_save_path,
+                        'Straw_Models': straw_save_path,
                         'SHAP': shap_value_save_path,
                         'Figures': figure_save_path
                         },
                     'Data_preprocessing': {
                         'Data_Path': data_file_path,
-                        'Ratiometric': ratiometric,
+                        'Formula_param_type': param_type,
                         'Input_Params': input_param_names,
                         'Size_cutoff': size_cutoff,
                         'PDI_cutoff': PDI_cutoff,
@@ -54,15 +58,15 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, ratiometric, data_file_path, si
                         'Method': 'Nested CV',
                         'N_CV' : N_CV,
                         'Model_list': model_list,
-                        'Results': {                  
-                            'Absolute_Error': None,
-                            'MAE' : None},
+                        'NESTED_CV': {},
                         'Best_Model':{
                             'Model_Name' : None, 
                             'Model': None, 
                             'Hyper_Params': None,
                             'Predictions' : None,
-                            'MAE': None
+                            'MAE': None,
+                            'Spearman':None,
+                            'Pearson': None
                             }
                         },
                     'Feature_Reduction':{
@@ -72,6 +76,13 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, ratiometric, data_file_path, si
                         'Refined_Model': None,
                         'Final_Results': None,
                         'Reduction_Results': None
+                        },
+                    'Straw_Model':{
+                        'X': None,
+                        'y': None,
+                        'Model': None,
+                        'N_CV': None,
+                        'Results': None
                         },
                     'SHAP':{
                         'X': None,
@@ -106,6 +117,45 @@ def save_pipeline(pipeline, path, step):
             pickle.dump(pipeline, file)
     print(f"\n--- SAVED PIPELINE: {step} CONFIG AND RESULTS for {c}  ---")
 
+def select_input_params(cell, method = None):
+    #Input parameters
+    if method == 'ratio':
+        formulation_param_names = ['NP_ratio',
+                                   'Chol_DMG-PEG_ratio',
+                                   '(IL+HL)',
+                                   'Dlin-MC3_Helper lipid_ratio' ] 
+    elif method == 'percent':
+        formulation_param_names = ['NP_ratio',
+                                    'PEG_(Chol+PEG)',
+                                    '(IL+HL)',
+                                    'HL_(IL+HL)',
+                                    'Lipid_NA_ratio'] 
+    elif method == 'weight':
+        formulation_param_names = ['wt_Helper', 'wt_Dlin',
+                        'wt_Chol', 'wt_DMG', 'wt_pDNA'] 
+    else:
+        raise "INVALID FORMULATION PARAMETER TYPE"
+    lipid_param_names = ['P_charged_centers', 
+                         'N_charged_centers', 
+                         'cLogP', 
+                         'Hbond_D', 
+                         'Hbond_A', 
+                         'Total_Carbon_Tails', 
+                         'Double_bonds']
+
+    NP_level_params = ['Size', 'PDI', 'Zeta']
+    
+    input_param_names =  lipid_param_names + NP_level_params + formulation_param_names
+
+
+    #Total carbon tails does not change for any datapoints for these cell
+    if cell in ['ARPE19','N2a']:
+        while "Total_Carbon_Tails" in input_param_names:
+            input_param_names.remove("Total_Carbon_Tails")
+
+    return input_param_names
+
+
 def extract_training_data(pipeline):
     #Assign variables based on dictionary
     cell_type = pipeline['Cell']
@@ -118,7 +168,6 @@ def extract_training_data(pipeline):
     
     #Extract datafile
     df = pd.read_csv(data_path)
-
 
     #Formatting Training Data
     raw_data = df[['Formula label', 'Helper_lipid'] + input_params + [prefix + cell_type]].copy()
@@ -156,38 +205,6 @@ def extract_training_data(pipeline):
     pipeline['STEPS_COMPLETED']['Preprocessing'] = True
 
     return pipeline, X,Y, processed_data
-
-
-def select_input_params(cell, ratio = True):
-    #Input parameters
-    if ratio:
-        formulation_param_names = ['NP_ratio',
-                                   'Chol_DMG-PEG_ratio',
-                                   'Dlin-MC3+Helper lipid percentage',
-                                   'Dlin-MC3_Helper lipid_ratio' ] 
-    else:
-        formulation_param_names = ['wt_Helper', 'wt_Dlin',
-                        'wt_Chol', 'wt_DMG', 'wt_pDNA'] 
-    
-    lipid_param_names = ['P_charged_centers', 
-                         'N_charged_centers', 
-                         'cLogP', 
-                         'Hbond_D', 
-                         'Hbond_A', 
-                         'Total_Carbon_Tails', 
-                         'Double_bonds']
-
-    NP_level_params = ['Size', 'PDI', 'Zeta']
-    
-    input_param_names =  lipid_param_names + NP_level_params + formulation_param_names
-
-
-    #Total carbon tails does not change for any datapoints for these cell
-    if cell in ['ARPE19','N2a']:
-        while "Total_Carbon_Tails" in input_param_names:
-            input_param_names.remove("Total_Carbon_Tails")
-
-    return input_param_names
 
 
 
@@ -303,40 +320,47 @@ def find_bin(value, bins):
             return i
     return -1
 
-def extraction_all(model_name, model_path, N_CV):
+def extraction_all(pipeline, model_name, loop = 'test'):
     '''
     function that extracts and compiles a results dataframe as well as an 
-    absolute error array for all modesl in NESTED_CV_results pickle files
+    absolute error array
     '''
-    df = pd.read_pickle(model_path + f"{model_name}/Best_Model_Results.pkl", compression='infer', storage_options=None)
-    list_of_dataframes = []
-    
-    for n in range (N_CV): #Range corresponds to number of outerloop iterations
-        dataframe = pd.DataFrame(df['Formulation_Index'][n], columns=['Formulation_Index'])
-        dataframe['Experimental_Transfection'] = df['Experimental_Transfection'][n]
-        dataframe['Predicted_Transfection'] = df['Predicted_Transfection'][n]
-        dataframe['Formulation_Index'] = df['Formulation_Index'][n]
-        dataframe['Absolute_Error'] = abs(dataframe['Experimental_Transfection'] - dataframe['Predicted_Transfection'])
-        list_of_dataframes.append(dataframe)
-    
-    dataframe_all = pd.concat(list_of_dataframes, axis=0, ignore_index=True)
-    return dataframe_all
+    if loop == 'test': #Test set
+        df = copy(pipeline['Model_Selection']['NESTED_CV'][model_name]['Final_model']['Test_pred'])
+        df['Absolute_Error'] = abs(df['Experimental_Transfection'] - df['Predicted_Transfection'])
+        df_compiled = df
+    elif loop == 'CV': #validation set
+        df = pipeline['Model_Selection']['NESTED_CV'][model_name]['HP_tuning_df']
+        list_of_dataframes = []
 
-def get_Model_Selection_Error(model_list, model_path, N_CV):
+        #Compiled the CV validation across all outerloops
+        for n in range (pipeline['Model_Selection']['N_CV']): #Range corresponds to number of outerloop CV iterations
+            dataframe = pd.DataFrame(df['Formulation_Index'][n], columns=['Formulation_Index'])
+            dataframe['Experimental_Transfection'] = df['Experimental_Transfection'][n]
+            dataframe['Predicted_Transfection'] = df['Predicted_Transfection'][n]
+            dataframe['Formulation_Index'] = df['Formulation_Index'][n]
+            dataframe['Absolute_Error'] = abs(dataframe['Experimental_Transfection'] - dataframe['Predicted_Transfection'])
+            list_of_dataframes.append(dataframe)
+        
+        df_compiled = pd.concat(list_of_dataframes, axis=0, ignore_index=True)
+    else:
+        raise("INVALID LOOP TYPE")
+
+    return df_compiled
+def get_Model_Selection_Error(pipeline, loop):
     #Collect error for all best models
+    model_list = pipeline['Model_Selection']['Model_list']
     ALL_AE = pd.DataFrame(columns = model_list)
+
     #Extract and Calculate Absolute Error for each model
     for model_name in model_list:
-        ALL_AE[model_name]= extraction_all(model_name, model_path, N_CV)['Absolute_Error']
+        ALL_AE[model_name]= extraction_all(pipeline=pipeline, model_name=model_name, loop = loop)['Absolute_Error']
 
-    #Sort by best MAE
+    #Sort models from left to right by increasing MAE
     sorted_index = ALL_AE.mean().sort_values().index
     sorted_AE =ALL_AE[sorted_index]
 
-    #Get best predictions and the true y values for the best model
-    best_AE = extraction_all(sorted_index[0], model_path, N_CV)
-
-    return sorted_AE, best_AE
+    return sorted_AE
 
 
 def get_best_model_cell(figure_save_path, model_folder, cell_type_list):
