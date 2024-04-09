@@ -83,7 +83,7 @@ def main():
 
     ##################### Model Selection #####################################
     if run_model_selection:
-      #Timing (Estimate 30min)
+      #Timing (Estimate 5-10 min per cell)
       pipeline_dict, _, _, _ = run_Model_Selection(pipeline_dict)
 
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
@@ -92,14 +92,14 @@ def main():
 
     #################### Feature Reduction #####################################
     if run_feature_reduction:
-      #Timing (Estimated 4-8hrs)
+      #Timing (Estimated 1-2hr per cell)
       pipeline_dict, _,_,_,_,_ = Feature_reduction.main(pipeline=pipeline_dict)
 
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
                     step = 'FEATURE REDUCTION')
     
     if run_straw_model:
-      #Timing (Estimated 5-10 minutes)
+      #Timing (Estimated 5-10min per cell)
 
       HL_features =  ['P_charged_centers', 
                          'N_charged_centers', 
@@ -110,13 +110,14 @@ def main():
                          'Double_bonds']
 
       pipeline_dict = straw_model.main(pipeline=pipeline_dict,
-                                                  params_to_test= HL_features)
+                                        params_to_test= ['HL_(IL+HL)',
+                                        '(IL+HL)'] + HL_features)
 
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
                     step = 'STRAW MODEL')
     #################### SHAP Analysis #####################################
     if run_SHAP_explain:
-      #Timing (Estimated 3 min)
+      #Timing (Estimated 1 minute per cell)
       pipeline_dict, _,_,_,_ = get_shap_explainations.main(pipeline_dict, 10)
       
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 

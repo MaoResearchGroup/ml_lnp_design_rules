@@ -19,19 +19,19 @@ from sklearn.metrics import mean_absolute_error, make_scorer
 from copy import deepcopy
 import time 
 
-def shuffle_column(df, col):
+def shuffle_column(df, col, i = 42):
     if col == 'No Shuffle':
         return df.copy()
     
     shuffled_df = df.copy()
-    shuffled_df[col] = shuffled_df[col].sample(frac=1).reset_index(drop = True)
+    shuffled_df[col] = shuffled_df[col].sample(frac=1, random_state = i).reset_index(drop = True)
     return shuffled_df
 
 
-def evaluate_model(X,y, model, N_CV = 5):
+def evaluate_model(X,y, model, N_CV = 5, i = 42):
 
     #Kfold spltting
-    kf = KFold(n_splits=N_CV, random_state= 200, shuffle=True)
+    kf = KFold(n_splits=N_CV, random_state= i, shuffle=True)
 
     # Lists to store fold results
     test_indices_list = []
@@ -74,7 +74,7 @@ def evaluate_model(X,y, model, N_CV = 5):
     return MAE_list, acc, acc_sd, spearman, spearman_sd, pearson, pearson_sd, test_indices_list, predictions_list
 
 
-def main(pipeline:dict, params_to_test:list):
+def main(pipeline:dict, params_to_test:list, NUM_TRIALS:int = 10):
     
     print('\n###########################\n\n TESTING STRAW MODELS')
     start_time = time.time()
@@ -102,30 +102,40 @@ def main(pipeline:dict, params_to_test:list):
     straw_result_df = pd.DataFrame(index = test_list, columns = ['Shuffled df', 'MAE_list', 'avg_MAE', 'avg_MAE_sd', 'spearman', 'spearman_sd', 'pearson', 'pearson_sd', 'pred', 'test'])
     straw_result_df.index.name = "Feature"
 
+
+
+    shuffled_param = []
+    itr_number = [] # create new empty list for itr number 
+    avg_MAE = []
+    shuffled_X_list = []
+    y_test_list = []
+    pred_list = []
+
+
     for param in test_list:
-        #shuffle column of interest
-        shuffled_X = shuffle_column(X, param)
 
-        #evaluate model with shuffled training data
-        MAE_list, acc, acc_sd, spearman, spearman_sd, pearson, pearson_sd, test, pred = evaluate_model(shuffled_X, y, model, N_CV)
+        for i in range(NUM_TRIALS):
+            #shuffle column of interest
+            shuffled_X = shuffle_column(X, param, i)
 
-        #Results
-        print(f"Shuffled {param} ACCURACY:{acc} +- {acc_sd}")
-        print(f"Shuffled {param} Spearman:{spearman} +- {spearman_sd}")
-        print(f"Shuffled {param} Pearson :{pearson} +- {pearson_sd}")
+            
+            #evaluate model with Kfold cross validation using shuffled training data
+            MAE_list, acc, acc_sd, spearman, spearman_sd, pearson, pearson_sd, test, pred = evaluate_model(shuffled_X, y, model, N_CV, i)
+            shuffled_param.append(param)
+            itr_number.append(i)
+            avg_MAE.append(acc)
+            shuffled_X_list.append(shuffled_X)
+            y_test_list.append(test)
+            pred_list.append(pred)
 
-
-        #Storing results
-        straw_result_df.at[param, 'Shuffled df'] = shuffled_X
-        straw_result_df.at[param, 'MAE_list'] = MAE_list
-        straw_result_df.at[param, 'avg_MAE'] = acc
-        straw_result_df.at[param, 'spearman'] = spearman
-        straw_result_df.at[param, 'pearson'] = pearson
-        straw_result_df.at[param, 'avg_MAE_sd'] = acc_sd
-        straw_result_df.at[param, 'spearman_sd'] = spearman_sd
-        straw_result_df.at[param, 'pearson_sd'] = pearson_sd
-        straw_result_df.at[param, 'pred'] = pred
-        straw_result_df.at[param, 'test'] = test
+    #create dataframe with results of nested CV
+    list_of_tuples = list(zip(shuffled_param, itr_number,avg_MAE, shuffled_X_list, y_test_list, pred_list))
+    straw_result_df = pd.DataFrame(list_of_tuples, columns = ['Feature', 
+                                                         'Iter', 
+                                                        'KFold Average MAE', 
+                                                        'Shuffled X',
+                                                        'Experimental_Transfection',
+                                                        'Predicted_Transfection'])
 
     #Save results to excel for user
     straw_result_df.to_excel(f'{save_path}Straw_model_results.xlsx')
@@ -143,6 +153,7 @@ def main(pipeline:dict, params_to_test:list):
     pipeline['Straw_Model']['y'] = y
     pipeline['Straw_Model']['Model'] = model
     pipeline['Straw_Model']['N_CV'] = N_CV
+    pipeline['Straw_Model']['NUM_TRIALS'] = NUM_TRIALS
     pipeline['Straw_Model']['Results'] = straw_result_df
     pipeline['STEPS_COMPLETED']['Straw_Model'] = True
 

@@ -22,7 +22,7 @@ def main():
         RUN_NAME  = f"Runs/Percentage_PDI1_RLU2_Final/"
 
         # cell_type_list = ['N2a']
-        cell_type_list = ['B16', 'HepG2', 'PC3', 'HEK293',  'N2a', 'ARPE19']
+        cell_type_list = ['HepG2','B16',  'PC3', 'HEK293',  'N2a', 'ARPE19']
 
         shap_cmap = truncate_colormap(plt.cm.get_cmap('Greens'), 0.2, 0.8)
         

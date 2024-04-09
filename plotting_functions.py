@@ -808,31 +808,36 @@ def plot_straw_model(pipeline, palette = 'husl'):
     cell = pipeline['Cell']
     save = pipeline['Saving']['Figures']
     df = pipeline['Straw_Model']['Results'].copy()
-    df = df['MAE_list']
-    df_reset = df.reset_index()
-    df_expanded = df_reset.explode('MAE_list')
-    df_expanded['MAE_list'] = df_expanded['MAE_list'].astype(float)
 
-    #T-test against the "No shuffle control"
-    control_values = df_expanded[df_expanded['Feature'] == 'No Shuffle']['MAE_list']
+
+    #one-way T-test against the "No shuffle" control
+    control_values = df[df['Feature'] == 'No Shuffle']['KFold Average MAE']
     results = {}
-    for group in df_expanded['Feature'].unique():
+    for group in df['Feature'].unique():
         if group != 'No Shuffle':
-            group_values = df_expanded[df_expanded['Feature'] == group]['MAE_list']
-            t_stat, p_value = stats.ttest_ind(control_values, group_values)
+            group_values = df[df['Feature'] == group]['KFold Average MAE']
+            t_stat, p_value_two_sided = stats.ttest_ind(control_values, group_values)
+
+            # Adjust p-value for one-sided test (if the mean of sample1 is hypothesized to be less than sample2)
+            if t_stat < 0:
+                p_value = p_value_two_sided / 2
+            else:
+                p_value = 1 - (p_value_two_sided / 2)
             results[group] = p_value
 
     # Create the bar plot
-    sns.barplot(data=df_expanded, x='Feature', y='MAE_list', errorbar = 'sd',capsize=.15,  palette=palette)
-    sns.stripplot(data=df_expanded, x='Feature', y='MAE_list', color="black", jitter=True, size=6, alpha=0.5)
+    ax =  sns.barplot(data=df, x='Feature', y='KFold Average MAE', errorbar = 'sd',capsize=.15,  palette=palette)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
+
+    sns.stripplot(data=df, x='Feature', y='KFold Average MAE', color="black", jitter=True, size=6, alpha=0.5)
 
     # Statistical Annotation (Student T test)
     annotation_buffer = .05
     for group, p_value in results.items():
-        # if p_value < 0.05:
-            x1 = df_expanded['Feature'].unique().tolist().index('No Shuffle')
-            x2 = df_expanded['Feature'].unique().tolist().index(group)
-            y = df_expanded['MAE_list'].max() + annotation_buffer
+        if p_value < 0.05:
+            x1 = df['Feature'].unique().tolist().index('No Shuffle')
+            x2 = df['Feature'].unique().tolist().index(group)
+            y = df['KFold Average MAE'].max() + annotation_buffer
             plt.plot([x1, x1, x2, x2], [y - 0.02, y, y, y - 0.02], lw=1.5, c='black')
             plt.text((x1 + x2) * 0.5, y, f"p = {p_value:.2e}", ha='center', va='bottom')  # Adjust formatting as needed
             annotation_buffer = annotation_buffer + 0.05
