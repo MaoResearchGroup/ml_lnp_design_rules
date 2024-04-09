@@ -1,6 +1,7 @@
 from utilities import extract_training_data, init_pipeline, save_pipeline
 from run_Model_Selection import run_Model_Selection
 import Feature_reduction
+import straw_model
 import get_shap_explainations
 import pickle
 import os
@@ -13,19 +14,21 @@ def main():
   new_pipeline = False
   
   #Parts to Run/Update
-  run_preprocessing     = True
+  run_preprocessing     = False
   run_model_selection   = False
   run_feature_reduction = False
+  run_straw_model       = True
   run_SHAP_explain      = False
   
   #Cell types to Run
+  # cell_type_list = ['N2a']
   cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
 
   
   ############### PARAMETERS ###############################
-  
-  model_list = ['RF','LGBM', 'XGB', 'DT', 'MLR', 'lasso', 'PLS', 'kNN']#Did not include SVR 
-  ratiometric = True
+  # model_list = ['RF','LGBM', 'XGB']
+  model_list = ['RF','LGBM', 'XGB', 'DT', 'MLR', 'lasso', 'PLS', 'kNN', 'MLP']
+  formula_type = 'percentage' #options: ratio, percent, weight
   RLU_floor = 2
   size_cutoff = 100000
   PDI_cutoff = 1 #Use 1 to include all data
@@ -34,7 +37,7 @@ def main():
   prefix = "RLU_" #WARNING: HARDCODED
 
   ################ SAVING, LOADING##########################
-  RUN_NAME                  = f"Runs/Final_PDI{PDI_cutoff}_RLU{RLU_floor}/"
+  RUN_NAME                  = f"Runs/Percentage_PDI{PDI_cutoff}_RLU{RLU_floor}_Final/"
   #RUN_NAME                  = f"Runs/Models_Final_All_Size_PDI{PDI_cutoff}_keep_Zeta_RLU{RLU_floor}"
   data_file_path            = 'Raw_Data/Final_Master_Formulas_updated.csv' #Where to extract training data
 
@@ -57,7 +60,7 @@ def main():
                                     RUN_NAME=RUN_NAME,
                                     cell = c,
                                     model_list=model_list,
-                                    ratiometric=ratiometric,
+                                    param_type = formula_type,
                                     data_file_path=data_file_path,
                                     size_cutoff=size_cutoff,
                                     PDI_cutoff=PDI_cutoff,
@@ -80,7 +83,7 @@ def main():
 
     ##################### Model Selection #####################################
     if run_model_selection:
-      #Timing (Estimate 30min)
+      #Timing (Estimate 5-10 min per cell)
       pipeline_dict, _, _, _ = run_Model_Selection(pipeline_dict)
 
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
@@ -89,15 +92,32 @@ def main():
 
     #################### Feature Reduction #####################################
     if run_feature_reduction:
-      #Timing (Estimated 4-8hrs)
+      #Timing (Estimated 1-2hr per cell)
       pipeline_dict, _,_,_,_,_ = Feature_reduction.main(pipeline=pipeline_dict)
 
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
                     step = 'FEATURE REDUCTION')
+    
+    if run_straw_model:
+      #Timing (Estimated 5-10min per cell)
 
+      HL_features =  ['P_charged_centers', 
+                         'N_charged_centers', 
+                         'cLogP', 
+                         'Hbond_D', 
+                         'Hbond_A', 
+                         'Total_Carbon_Tails', 
+                         'Double_bonds']
+
+      pipeline_dict = straw_model.main(pipeline=pipeline_dict,
+                                        params_to_test= ['HL_(IL+HL)',
+                                        '(IL+HL)'] + HL_features)
+
+      save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
+                    step = 'STRAW MODEL')
     #################### SHAP Analysis #####################################
     if run_SHAP_explain:
-      #Timing (Estimated 3 min)
+      #Timing (Estimated 1 minute per cell)
       pipeline_dict, _,_,_,_ = get_shap_explainations.main(pipeline_dict, 10)
       
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 

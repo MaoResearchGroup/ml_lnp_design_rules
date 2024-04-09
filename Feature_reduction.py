@@ -6,7 +6,7 @@ import matplotlib.cm as cm
 import matplotlib
 import numpy as np
 from scipy import stats
-from scipy.stats import spearmanr
+from scipy.stats import spearmanr, ttest_ind
 from sklearn.model_selection import train_test_split, KFold
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import squareform
@@ -200,7 +200,10 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats):
         
         print(f'CURRENT BEST AVERAGE MAE IS {np.round(best_MAE, 5)}')
         print(f'TEST AVERAGE MAE IS {np.round(np.mean(acc_results),5)}')
+        
+        
         # If the performance is equal or worse than previous than update parameters else keep the feature
+        # Criteria is a one-way students' T test
         if round(np.mean(acc_results),5) <= round(best_MAE,5):
             print(f'\n{feature} WAS REMOVED AND BEST RESULTS UPDATED\n') 
 
@@ -240,12 +243,6 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats):
                             pearson, pear_std,
                             predictions, experimental,
                             n/N_features]
- 
-            # # Only append new reduction data if sucessful
-            # MAE_list.append(np.mean(acc_results)) # append average MAE value to empty list
-            # MAE_std_list.append(np.std(acc_results))
-            # spear_list.append(spearman_results)
-            # pear_list.append(pearson_results)
         else:
             print(f'\n{feature} WAS NOT REMOVED \n') 
         iteration +=1

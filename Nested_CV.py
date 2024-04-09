@@ -12,6 +12,7 @@ from scipy import stats
 from scipy.stats import uniform, randint
 from sklearn.model_selection import RandomizedSearchCV as RSCV
 import utilities
+import copy
 
 # import model frameworks
 from sklearn.linear_model import LinearRegression
@@ -23,6 +24,7 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
+from sklearn.neural_network import MLPRegressor
 #from ngboost import NGBRegressor
 
 
@@ -130,7 +132,19 @@ class NESTED_CV:
                         'min_child_weight': [1.0, 2.0, 4.0, 5.0],
                         'max_delta_step':[1, 2, 4, 6, 8, 10],
                         'reg_alpha':[0.001, 0.01, 0.1],
-                        'reg_lambda': [0.001, 0.01, 0.1]}                
+                        'reg_lambda': [0.001, 0.01, 0.1]} 
+        elif model_type == 'MLP':
+          self.user_defined_model = MLPRegressor()
+          self.p_grid ={
+                        'hidden_layer_sizes': [(50,50,50), (50,100,50), (100,)],
+                        'activation': ['tanh', 'relu', 'logistic', 'identity'],
+                        'solver': ['sgd', 'adam'],
+                        'alpha': [0.0001,0.01, 0.05],
+                        'batch_size':['auto', 64, 128],
+                        'max_iter': [100, 200, 300],
+                        'learning_rate': ['constant','adaptive'],
+                        'tol': [1e-4, 1e-5]
+                        }                
         # elif model_type == 'NGB':
         #   b1 = DecisionTreeRegressor(criterion='squared_error', max_depth=2)
         #   b2 = DecisionTreeRegressor(criterion='squared_error', max_depth=4)
@@ -149,8 +163,9 @@ class NESTED_CV:
           print("#######################\nSELECTION UNAVAILABLE!\n#######################\n\nPlease chose one of the following options:\n\n 'MLR'for multiple linear regression\n\n 'lasso' for multiple linear regression with east absolute shrinkage and selection operator (lasso)\n\n 'kNN'for k-Nearest Neighbors\n\n 'PLS' for partial least squares\n\n 'SVR' for support vertor regressor\n\n 'DT' for decision tree\n\n 'RF' for random forest\n\n 'LGBM' for LightGBM\n\n 'XGB' for XGBoost\n\n 'NGB' for NGBoost")
 
     def input_target(self, X, y, data):
-        self.X, self.Y, self.cell_data = X, y, data
-        self.F = self.cell_data['Formula label']
+        self.X, self.y, self.cell_data = X, y, data
+        self.F = self.cell_data['Formula label'] #used to track LNPs
+        self.HL = self.cell_data['Helper_lipid'] #used for stratify split
     
     def cross_validation(self, input_value):
         if input_value == None:
@@ -169,11 +184,16 @@ class NESTED_CV:
         self.pred_list = []
 
 
-        # Split CV loop model development set and final test set
-        self.X_cv_loop, self.X_final_test, self.y_cv_loop, self.y_final_test = train_test_split(self.X, self.Y, test_size= 0.15, random_state= 42, shuffle= True)
-          
+        # Split CV loop model development set and final test set (Fully insulated from any training data)
+        indices = self.X.index
+        # self.X_cv_loop, self.X_final_test, self.y_cv_loop, self.y_final_test = train_test_split(self.X, self.Y, test_size= 0.15, random_state= 4, stratify= self.HL, shuffle= True)
+        cv_idx, test_idx, _,_ = train_test_split(indices, self.y, test_size= 0.15, random_state= 4, stratify= self.HL, shuffle= True)
+        
+        self.X_cv_loop, self.X_final_test, = self.X.iloc[cv_idx], self.X.iloc[test_idx]
+        self.y_cv_loop, self.y_final_test  = self.y.iloc[cv_idx], self.y.iloc[test_idx]
+        self.F_cv_loop, self.F_final_test  = self.F.iloc[cv_idx], self.F.iloc[test_idx]
         # Nested CV
-        cv_outer = KFold(n_splits = NUM_TRIALS , random_state= i, shuffle=True) # Kfold split of the developemnt dataset
+        cv_outer = KFold(n_splits = NUM_TRIALS , random_state= 100, shuffle=True) # Kfold split of the developemnt dataset
 
 
         for i, (train_index, test_index) in enumerate(cv_outer.split(self.X_cv_loop)):
@@ -184,8 +204,8 @@ class NESTED_CV:
           X_test = self.X_cv_loop.iloc[test_index].copy()
           y_train = self.y_cv_loop.iloc[train_index].copy()
           y_test = self.y_cv_loop.iloc[test_index].copy()
-          F_train = self.F.iloc[train_index].copy()
-          F_test = self.F.iloc[test_index].copy()
+          F_train = self.F_cv_loop.iloc[train_index].copy()
+          F_test = self.F_cv_loop.iloc[test_index].copy()
 
           #store test set information
           F_test = np.array(F_test) #prevents index from being brought from dataframe
@@ -256,6 +276,45 @@ class NESTED_CV:
         print('Cross Validation Results', CV_dataset)
         # save the results as a class object
         self.CV_dataset = CV_dataset
+ ###### Retrain model using best parameters to evaluate the test set MAE
+    def FINAL_TEST_MAE(self):
+        # assign the best hyperparameters from NESTED CV
+        self.best_model_params = self.CV_dataset.iloc[0,5]
+        print('\nFinal_Best_Model_Params: \n%s' % self.best_model_params)
+
+        # set params from the best model to a class object
+        best_model = self.user_defined_model.set_params(**self.best_model_params)
+
+        #Fit on all cv loop training data
+        self.best_model = best_model.fit(self.X_cv_loop, self.y_cv_loop)
+
+        #Predict test set
+        yhat = self.best_model.predict(self.X_final_test)
+
+        #Make Predictions dataframe for downstream plotting
+        pred_df = pd.DataFrame(self.F_final_test, columns = ['Formula label']).reset_index(drop=True)
+        yhat_df = pd.DataFrame(yhat, columns = ['Predicted_Transfection'])
+        y_test_df = copy.copy(self.y_final_test)
+        y_test_df.reset_index(inplace = True, drop = True)
+        pred_df = pd.concat([pred_df, yhat_df, y_test_df], axis = 1, ignore_index=True)
+        pred_df.columns = ['Formula label','Predicted_Transfection', 'Experimental_Transfection']
+
+        #calclate performance
+        AE = abs(pred_df['Predicted_Transfection'] - pred_df['Experimental_Transfection'])
+        acc = mean_absolute_error(y_test_df, yhat)
+        spearmans_rank = stats.spearmanr(y_test_df, yhat)
+        
+        y_test = np.ravel(y_test_df) #reformat to 1D array
+        pearsons_r = stats.pearsonr(y_test, yhat)
+
+        
+
+        print('\n################################################################\n\n BEST MODEL FINAL HOLD_OUT PERFORMANCE:')
+        print('FINAL_Hold_Out_MAE: %.3f,  FINAL_Hold_Out_Spearman_Rank: %.3f, FINAL_Hold_Out_Pearsons_R: %.3f' % (acc, spearmans_rank[0], pearsons_r[0]))
+        print("\n################################################################\n ")
+
+
+        return AE, acc, spearmans_rank, pearsons_r, pred_df
 
     def best_model_refit(self):
         # assign the best model hyperparameters
@@ -263,90 +322,6 @@ class NESTED_CV:
         print('\nFinal_Best_Model_Params: \n%s' % self.best_model_params)
         # set params from the best model to a class object
         best_model = self.user_defined_model.set_params(**self.best_model_params)
-        y_train = self.Y.copy()
+        y_train = self.y.copy()
         y_train = np.ravel(y_train) #reformat
         self.best_model = best_model.fit(self.X, y_train) #Fit hyperparameter optimized model using all data as training set.
-
-    
-    ###### Retrain model using best parameters across 5 datasplits to evaluate the overall MAE
-    def overall_MAE(self, N_CV):
-        #Initialize model with best hyperparameters
-        self.best_model_params = self.CV_dataset.iloc[0,5]
-        best_model = self.user_defined_model.set_params(**self.best_model_params)
-        
-        #Result Storage
-        self.best_itr_number = [] # create new empty list for itr number 
-        self.best_MAE = []
-        self.best_spearman = []
-        self.best_pearson = []
-        self.best_model_params_repeat = []
-        self.best_F_test_list = []
-        self.best_y_test_list = []
-        self.best_pred_list = []
-
-        #Kfold object
-        cv = KFold(n_splits=N_CV, random_state= 10, shuffle=True)
-
-        #Train and measure model performance across splits
-        for i, (train_index, test_index) in enumerate(cv.split(self.X)):
-
-          # #X = input parameters, y = transfection, F = formulation number
-          #X_train, X_test, y_train, y_test, F_train, F_test = train_test_split(self.X, self.Y, self.F, test_size=0.2, random_state= i) #Iterate through different random_state to randomize test_train split
-          X_train = self.X.iloc[train_index].copy()
-          X_test = self.X.iloc[test_index].copy()
-          y_train = self.Y.iloc[train_index].copy()
-          y_test = self.Y.iloc[test_index].copy()
-          F_train = self.F.iloc[train_index].copy()
-          F_test = self.F.iloc[test_index].copy()
-
-          #store test set information
-          F_test = np.array(F_test) #prevents index from being brought from dataframe
-          self.best_F_test_list.append(F_test)
-          y_test = np.array(y_test) #prevents index from being brought from dataframe
-          self.best_y_test_list.append(y_test)
-
-
-          #### train and evaluate model on the hold out dataset
-          y_train = np.ravel(y_train)
-          best_model.fit(X_train, y_train)
-          yhat = best_model.predict(X_test)
-
-          #Cell-type transfection predictions
-          self.best_pred_list.append(yhat)
-
-          # evaluate the model accuracy using the hold out dataset Mean Absolute Error
-          acc = mean_absolute_error(y_test, yhat)
-          spearmans_rank = stats.spearmanr(y_test, yhat)
-          
-          y_test = np.ravel(y_test) #reformat to 1D array
-          pearsons_r = stats.pearsonr(y_test, yhat)
-
-          # store the result
-          self.best_itr_number.append(i+1)
-          self.best_MAE.append(acc)
-          self.best_spearman.append(spearmans_rank)
-          self.best_pearson.append(pearsons_r)
-          self.best_model_params_repeat.append(self.best_model_params)
-          #print(self.best_itr_number)
-          print('\n################################################################\n\n BEST MODEL VALIDATION STATUS REPORT:')
-          print('Iteration '+str(i+1)+' of '+str(N_CV)+' runs completed') 
-          print('Hold_Out_MAE: %.3f,  Hold_Out_Spearman_Rank: %.3f, Hold_Out_Pearsons_R: %.3f' % (acc, spearmans_rank[0], pearsons_r[0]))
-          print("\n################################################################\n ")
-
-
-
-    def final_results(self):   
-            #create dataframe with results of nested CV
-            list_of_tuples = list(zip(self.best_itr_number, self.best_MAE, self.best_spearman,self.best_pearson, self.best_model_params_repeat, self.best_F_test_list, self.best_y_test_list, self.best_pred_list))
-            
-            CV_dataset = pd.DataFrame(list_of_tuples, columns = ['Iter', 
-                                                                'Test Score', 
-                                                                'Spearmans Rank',
-                                                                'Pearsons Correlation',
-                                                                'Model Parms', 
-                                                                'Formulation_Index',   
-                                                                'Experimental_Transfection',
-                                                                'Predicted_Transfection'])
-            print('Final Test Results', CV_dataset)
-            # save the results as a class object
-            self.best_model_dataset = CV_dataset

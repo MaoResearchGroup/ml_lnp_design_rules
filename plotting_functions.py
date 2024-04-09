@@ -7,7 +7,7 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib import colors
 from matplotlib.ticker import MultipleLocator
-from utilities import get_spearman, extract_training_data, run_tukey, extraction_all
+from utilities import get_spearman, extract_training_data, run_tukey, extraction_all, get_Model_Selection_Error
 from sklearn.decomposition import PCA
 from sklearn.model_selection import KFold
 from copy import deepcopy, copy
@@ -17,6 +17,7 @@ import shap
 import pickle
 from itertools import chain
 from matplotlib.colors import Normalize
+
 
 
 ########## INITIAL FEATURE ANALYSIS PLOTS ##################
@@ -290,11 +291,12 @@ def tfxn_clustering(X, Y, input_params, figure_save, cell):
     plt.close()
 
 ########## MODEL SELECTION PLOTS ##################
-def plot_AE_Box(pipeline, save):
+def plot_AE_Box(pipeline, save, loop = 'test'):
 
     #Retreive Data
     cell = pipeline['Cell']
-    df = pipeline['Model_Selection']['Results']['Absolute_Error']
+    
+    df = get_Model_Selection_Error(pipeline=pipeline, loop= loop)
 
     #convert AE to percent error
     error_df = df*100
@@ -314,9 +316,6 @@ def plot_AE_Box(pipeline, save):
     f, boxplot = plt.subplots(figsize=(6, 3))
 
     # choose color scheme
-    #palette = sns.color_palette("Paired")
-    #palette = sns.color_palette("pastel")
-    #palette = sns.color_palette("tab10")
     palette = sns.color_palette("husl", 8, as_cmap=False)
 
     # set boxplot style
@@ -386,7 +385,6 @@ def plot_predictions(pipeline, save, pred = None, exp = None, normalized = True,
         #Get Predictions
         model_name = pipeline['Model_Selection']['Best_Model']['Model_Name']
         data = pipeline['Model_Selection']['Best_Model']['Predictions']
-
 
         experimental = data['Experimental_Transfection']
         predicted = data['Predicted_Transfection']
@@ -571,13 +569,15 @@ def plot_cell_comparision(pipeline_list, save):
     best_AE = pd.DataFrame()
     for pipe in pipeline_list:
         #Extract best model AE for each cell
-        best_AE[pipe['Cell']] = pipe['Model_Selection']['Results']['Absolute_Error'].iloc[:,0] 
+        # best_AE[pipe['Cell']] = pipe['Model_Selection']['NESTED_CV']['Absolute_Error'].iloc[:,0] 
+        best_AE[pipe['Cell']] = pipe['Model_Selection']['Best_Model']['MAE']
     
     #convert data to percent error
     best_AE = best_AE*100
 
     #Sort DF by MAE
-    sorted_col = best_AE.mean().sort_values()
+    # sorted_col = best_AE.mean().sort_values()
+    sorted_col = best_AE.sort_values()
     best_AE = best_AE[sorted_col.index]
 
     #Plot
@@ -804,6 +804,48 @@ def plot_feature_reduction(pipeline):
     plt.savefig(save + f'{cell_type}_{model_name}_Feature_Reduction_Plot.svg', dpi=600, transparent = True, bbox_inches='tight')
     plt.close()
 
+def plot_straw_model(pipeline, palette = 'husl'):
+    cell = pipeline['Cell']
+    save = pipeline['Saving']['Figures']
+    df = pipeline['Straw_Model']['Results'].copy()
+
+
+    #one-way T-test against the "No shuffle" control
+    control_values = df[df['Feature'] == 'No Shuffle']['KFold Average MAE']
+    results = {}
+    for group in df['Feature'].unique():
+        if group != 'No Shuffle':
+            group_values = df[df['Feature'] == group]['KFold Average MAE']
+            t_stat, p_value_two_sided = stats.ttest_ind(control_values, group_values)
+
+            # Adjust p-value for one-sided test (if the mean of sample1 is hypothesized to be less than sample2)
+            if t_stat < 0:
+                p_value = p_value_two_sided / 2
+            else:
+                p_value = 1 - (p_value_two_sided / 2)
+            results[group] = p_value
+
+    # Create the bar plot
+    ax =  sns.barplot(data=df, x='Feature', y='KFold Average MAE', errorbar = 'sd',capsize=.15,  palette=palette)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
+
+    sns.stripplot(data=df, x='Feature', y='KFold Average MAE', color="black", jitter=True, size=6, alpha=0.5)
+
+    # Statistical Annotation (Student T test)
+    annotation_buffer = .05
+    for group, p_value in results.items():
+        if p_value < 0.05:
+            x1 = df['Feature'].unique().tolist().index('No Shuffle')
+            x2 = df['Feature'].unique().tolist().index(group)
+            y = df['KFold Average MAE'].max() + annotation_buffer
+            plt.plot([x1, x1, x2, x2], [y - 0.02, y, y, y - 0.02], lw=1.5, c='black')
+            plt.text((x1 + x2) * 0.5, y, f"p = {p_value:.2e}", ha='center', va='bottom')  # Adjust formatting as needed
+            annotation_buffer = annotation_buffer + 0.05
+
+    plt.savefig(save + f'{cell}_straw_model.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
+    plt.close()
+
+    return
 ############ LEARNING CURVE ##################
 def get_learning_curve(pipeline, refined = False, NUM_ITER =5, num_splits =5, num_sizes= 50):
 
@@ -834,7 +876,7 @@ def get_learning_curve(pipeline, refined = False, NUM_ITER =5, num_splits =5, nu
 
 
     #Copy Trained Model for learning curve
-    model = copy.deepcopy(trained_model)
+    model = deepcopy(trained_model)
 
 
     #initialize training sizes
@@ -948,7 +990,7 @@ def plot_learning_curve(pipeline):
 
 
 #################### SHAP PLOTS #########################
-def plot_summary(pipeline, cmap, save, feature_order = False):
+def plot_summary(pipeline, cmap, save, feature_order = None):
 
     #Config
     cell = pipeline['Cell']
@@ -1032,8 +1074,7 @@ def plot_importance(pipeline, save, feature_order = None):
     else:
         shap.plots.bar(shap_values, 
                 max_display=15,
-                show=False,
-                order=final_order)
+                show=False)
      
     #Set X axis limis
     ax1.set_xlim(xmin = 0, xmax = 0.15)
@@ -1306,6 +1347,8 @@ def bumpplot(pipeline_list, lw, save, feature_order = None):
     combined_norm_best_values = pd.DataFrame()
     combined_best_values = pd.DataFrame()
     cell_names = []
+
+
     #Extracting Data
     for pipe in pipeline_list:
         cell = pipe['Cell']
@@ -1339,16 +1382,27 @@ def bumpplot(pipeline_list, lw, save, feature_order = None):
 
     sorted_df = combined_norm_best_values.reindex(sorted_index).reset_index(drop = True)
     sorted_df = sorted_df.iloc[::-1] #Reverse so the features are ordered from top to bottom on plot
+    
+    
     # Plotting
     plt.rcParams["font.family"] = "Arial"
     plt.rcParams['font.size'] = 12 
     
     fig, ax = plt.subplots(figsize=(5, 4))
+    
     #Define feature colors
     feature_colors = {feature: sns.color_palette("husl", n_colors=combined_norm_best_values.shape[0])[i]
                   for i, feature in enumerate(combined_norm_best_values.index)}
     
-    sorted_df.insert(1,'Features', combined_norm_best_values.index/combined_norm_best_values.index.max())
+    print(combined_norm_best_values)
+    print(len(combined_norm_best_values.index))
+    # print(len(combined_norm_best_values.index.max()))
+    print(len(combined_norm_best_values.index/combined_norm_best_values.index.max()))
+
+    #add tick mark positions for all parameters
+    tick_locations = combined_norm_best_values.index/combined_norm_best_values.index.max()
+    print(sorted_df)
+    sorted_df.insert(1,'Features', tick_locations)
     sorted_df.fillna(-0.1, inplace = True)
 
 
@@ -1457,6 +1511,8 @@ def plot_validation_predictions(cell, validation_set, palette, save):
         patch.set_edgecolor('black')
         patch.set_linewidth(1)
 
+    #ylim
+    plt.ylim(0, 1)
 
     #Labels
     plt.ylabel('Predicted Transfection', fontsize = 12)
@@ -1498,5 +1554,5 @@ def plot_validation_predictions(cell, validation_set, palette, save):
 
     plt.grid(False)
     plt.savefig(save, dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
-    plt.show()
+    # plt.show()
     plt.close()
