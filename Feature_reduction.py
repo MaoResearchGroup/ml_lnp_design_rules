@@ -125,9 +125,10 @@ def feature_correlation(X, cell, save):
 
     return dist_linkage
 
-def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats):
+def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats, method:str = 'MAE'):
     N_features = len(X_features.columns)
     N_feature_tracker = 100
+    pvalue_list = []
     MAE_list = [] # empty list to store MAE values
     MAE_std_list = []
     spear_list = []
@@ -184,7 +185,7 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats):
     for feature in ordered_feature_removal_list:
         tested_features = initial_feature_list.copy()
 
-        #Remove features from feature list
+        #Remove features from feature list 
         if feature in initial_feature_list:
             tested_features.remove(feature)
 
@@ -198,14 +199,40 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats):
                                                                                                               N_CV,
                                                                                                               repeats=repeats)
         
+        
         print(f'CURRENT BEST AVERAGE MAE IS {np.round(best_MAE, 5)}')
         print(f'TEST AVERAGE MAE IS {np.round(np.mean(acc_results),5)}')
+        feature_removal = False
+        if method == 't-test':
+            #Conduct one-way T test
+            if feature == 'None':
+                control_values = acc_results
+
+            test_values = acc_results
+            t_stat, p_value_two_sided = stats.ttest_ind(control_values, test_values)
+
         
+            # Adjust p-value for one-sided test (if the mean of sample1 is hypothesized to be less than sample2)
+            if t_stat < 0:
+                p_value = p_value_two_sided / 2
+            else:
+                p_value = 1 - (p_value_two_sided / 2)
+            print(f'TEST p-value IS {np.round(p_value,5)}')
         
-        # If the performance is equal or worse than previous than update parameters else keep the feature
-        # Criteria is a one-way students' T test
-        if round(np.mean(acc_results),5) <= round(best_MAE,5):
+            # Criteria is a one-way students' T test, alpha of 0.05
+            if p_value > 0.05: #NOT SIGNIFICNATLY DIFFERENT
+                feature_removal = True
+                control_values = test_values
+        elif method == 'MAE':
+            feature_removal = round(np.mean(acc_results),5) <= round(best_MAE,5)
+            p_value = None
+        else:
+            raise("INVALID TEST METHOD")
+        
+        if feature_removal:
             print(f'\n{feature} WAS REMOVED AND BEST RESULTS UPDATED\n') 
+
+
 
             #Record Features used/removed
             feature_number_list.append(len(tested_features)) # append the number of input features to empty list
@@ -214,6 +241,7 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats):
             removed_feature_list.append(feature) #Add removed feature to removed list
             
             #Calculate results
+            pvalue_list.append(p_value)
             best_MAE = np.mean(acc_results)
             MAE_std = np.std(acc_results)
             spearman = np.mean(spearman_results)
@@ -232,12 +260,17 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats):
             pred_list.append(predictions)
             exp_list.append(experimental)
             
+
+            
+
+
             #update best results
             best_model = deepcopy(new_model)
             best_training_data = X_features.iloc[:,selected_features].copy()
         
             best_results = [len(initial_feature_list), initial_feature_list, 
-                            removed_feature_list, 
+                            removed_feature_list,
+                            p_value,
                             best_MAE, MAE_std,
                             spearman, spear_std,
                             pearson, pear_std,
@@ -251,7 +284,8 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats):
     print('\nFINAL REMOVED FEATURES', best_results[2])
 
     # create a list of tuples with results model refinement
-    list_of_tuples = list(zip(feature_number_list, feature_name_list, removed_feature_list, 
+    list_of_tuples = list(zip(feature_number_list, feature_name_list, removed_feature_list,
+                              pvalue_list, 
                               MAE_list, MAE_std_list,
                               spear_list, spear_std_list,
                               pear_list, pear_std_list,
@@ -263,7 +297,8 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats):
     # create a dataframe with results model refinement
     results_df = pd.DataFrame(list_of_tuples, columns = ['# of Features', 
                                                          'Feature names', 
-                                                         'Removed Feature Names', 
+                                                         'Removed Feature Names',
+                                                         'p_value', 
                                                          'MAE', 'MAE_std',
                                                          'Spearman', 'Spearman_std',
                                                          'Pearson', 'Pearson_std',
@@ -275,6 +310,7 @@ def eval_feature_reduction(dist_linkage, X_features, Y, model, N_CV, repeats):
     best_df = pd.DataFrame([best_results], columns= ['# of Features', 
                                                                'Feature names', 
                                                                'Removed Feature Names', 
+                                                               'p_value',
                                                                 'MAE', 'MAE_std',
                                                                 'Spearman','Spearman_std',
                                                                 'Pearson', 'Pearson_std',

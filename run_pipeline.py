@@ -16,13 +16,13 @@ def main():
   #Parts to Run/Update
   run_preprocessing     = False
   run_model_selection   = False
-  run_feature_reduction = False
-  run_straw_model       = True
+  run_feature_reduction = True
+  run_straw_model       = False
   run_SHAP_explain      = False
   
   #Cell types to Run
-  # cell_type_list = ['N2a']
-  cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
+  cell_type_list = ['HepG2']
+  # cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
 
   
   ############### PARAMETERS ###############################
@@ -93,8 +93,7 @@ def main():
     #################### Feature Reduction #####################################
     if run_feature_reduction:
       #Timing (Estimated 1-2hr per cell)
-      pipeline_dict, _,_,_,_,_ = Feature_reduction.main(pipeline=pipeline_dict)
-
+      pipeline_dict, _,_,_,_,_ = Feature_reduction.main(pipeline=pipeline_dict, repeats = 5)
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
                     step = 'FEATURE REDUCTION')
     

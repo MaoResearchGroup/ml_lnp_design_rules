@@ -378,7 +378,7 @@ def import_and_plot_validation_list(pipeline, path):
 def main():
     
     ################ What parts of the pipeline to run ###############
-    RUN_NAME  = f"Runs/Percentage_PDI1_RLU2_lipid_na_wt/"
+    RUN_NAME  = f"Runs/Percentage_PDI1_RLU2_Final/"
     new_validation = True
     #Parts to Run/Update
     run_validation_array            = False
@@ -391,7 +391,7 @@ def main():
     
     cell_type_list = ['HepG2']
     # cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
-    multiplex_cell_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
+    # multiplex_cell_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
 
 
     for c in cell_type_list:
