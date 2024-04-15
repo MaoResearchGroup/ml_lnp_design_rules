@@ -214,10 +214,10 @@ class NESTED_CV:
           self.y_test_list.append(y_test)
                 
           # configure the cross-validation procedure - inner loop (validation set/HP optimization)
-          cv_inner = KFold(n_splits = 10, shuffle = True) #4 splits to make 60% train set into 60%-20% train-validation
+          cv_inner = KFold(n_splits = 5, shuffle = True)
 
           # define search space
-          search = RSCV(self.user_defined_model, self.p_grid, n_iter=100, verbose=0, scoring='neg_mean_absolute_error', cv=cv_inner,  n_jobs= 6, refit=True)
+          search = RSCV(self.user_defined_model, self.p_grid, n_iter=100, verbose=0, scoring='neg_mean_absolute_error', cv=cv_inner,  n_jobs= -1, refit=True)
                   
           # execute search
           y_train = np.ravel(y_train)

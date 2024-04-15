@@ -355,12 +355,13 @@ def get_top_bot_validation_list(df, selection_args):
 def import_and_plot_validation_list(pipeline, path):
     df = pd.read_excel(path)
 
+    cell = pipeline['Cell']
     #get predicted values for multiplex set
     input_params = copy(pipeline['Validation_set']['Input_parameters'])
 
 
     print(f"USED THE FOLLOWING PARAMETERS FOR PREDICTIONS: {input_params}")
-    _,df['Normalized_y'],df['RLU_y'] = get_predictions(df[input_params], 
+    _,df['Normalized_y'],df[f'Pred_{cell}'] = get_predictions(df[input_params], 
                                                                     pipeline['Pipeline_load']['Model'],
                                                                     pipeline['Pipeline_load']['scaler'])            
     #sort by predicted values
@@ -379,6 +380,9 @@ def main():
     
     ################ What parts of the pipeline to run ###############
     RUN_NAME  = f"Runs/Percentage_PDI1_RLU2_Final/"
+    VALIDATION_DATA_PATH = "Raw_Data/Compiled_validation.xlsx"
+    
+    
     new_validation = True
     #Parts to Run/Update
     run_validation_array            = False
@@ -389,8 +393,8 @@ def main():
     run_comparison                  = True
 
     
-    cell_type_list = ['HepG2']
-    # cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
+    #cell_type_list = ['HepG2']
+    cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
     # multiplex_cell_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
 
 
@@ -484,16 +488,16 @@ def main():
                                multiplex_list=multiplex_cell_list)
                 
         if import_validation:
-            pred_df = import_and_plot_validation_list(validation, path  = f"{RUN_NAME}{c}/IV_Validation/Import_validation.xlsx")
+            pred_df = import_and_plot_validation_list(validation, path  = VALIDATION_DATA_PATH)
 
         ######## Compare Validation Results########## 
         if run_comparison:
             validation_path = f"{RUN_NAME}{c}/IV_Validation/"
-            exp_df = pd.read_excel(validation_path +"Import_validation.xlsx")
+            exp_df = pd.read_excel(VALIDATION_DATA_PATH)
 
-            y_pred = pred_df['RLU_y']
+            y_pred = pred_df[f'Pred_{c}']
 
-            y_test = exp_df['Exp_RLU']
+            y_test = exp_df[f'RLU_{c}']
 
 
             #Plot

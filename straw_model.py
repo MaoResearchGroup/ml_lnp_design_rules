@@ -19,14 +19,32 @@ from sklearn.metrics import mean_absolute_error, make_scorer
 from copy import deepcopy
 import time 
 
-def shuffle_column(df, col, i = 42):
-    if col == 'No Shuffle':
-        return df.copy()
-    
-    shuffled_df = df.copy()
-    shuffled_df[col] = shuffled_df[col].sample(frac=1, random_state = i).reset_index(drop = True)
-    return shuffled_df
 
+def get_valid_columns(df, cols):
+    if isinstance(cols, str) and cols in df.columns:
+        # Single column name provided as a string
+        return [cols]
+    elif isinstance(cols, int) and cols < len(df.columns):
+        # Column index provided as an integer
+        return [df.columns[cols]]
+    elif isinstance(cols, list):
+        # List of column names provided
+        return [col for col in cols if col in df.columns]
+    return []  # Return an empty list if none of the above conditions are met
+
+def shuffle_columns(df, cols_to_shuffle, i=42):
+    shuffled_df = df.copy()
+    shuffled_columns = []
+
+    if cols_to_shuffle:
+        if isinstance(cols_to_shuffle, list):
+            shuffled_df[cols_to_shuffle] = shuffled_df[cols_to_shuffle].apply(lambda x: x.sample(frac=1, random_state=i).reset_index(drop=True))
+            shuffled_columns.extend(cols_to_shuffle)
+        else:
+            shuffled_df[cols_to_shuffle] = shuffled_df[cols_to_shuffle].sample(frac=1, random_state=i).reset_index(drop=True)
+            shuffled_columns.append(cols_to_shuffle)
+
+    return shuffled_df, shuffled_columns
 
 def evaluate_model(X,y, model, N_CV = 5, i = 42):
 
@@ -74,20 +92,17 @@ def evaluate_model(X,y, model, N_CV = 5, i = 42):
     return MAE_list, acc, acc_sd, spearman, spearman_sd, pearson, pearson_sd, test_indices_list, predictions_list
 
 
-def main(pipeline:dict, params_to_test:list, NUM_TRIALS:int = 10):
+def main(pipeline:dict, params_to_test:list, NUM_TRIALS:int = 10,  new_run = False):
     
     print('\n###########################\n\n TESTING STRAW MODELS')
     start_time = time.time()
 
     #Config
     cell = pipeline['Cell']
-    model_name = pipeline['Model_Selection']['Best_Model']['Model_Name']
     model = deepcopy(pipeline['Model_Selection']['Best_Model']['Model'])
-    input_params = pipeline['Data_preprocessing']['Input_Params'].copy()
     X = pipeline['Feature_Reduction']['Refined_X'].copy()
     y = pipeline['Data_preprocessing']['y'].copy()
     N_CV = pipeline['Model_Selection']['N_CV']
-
 
     #Check/create correct save path
     RUN_NAME = pipeline['Saving']['RUN_NAME']
@@ -95,14 +110,34 @@ def main(pipeline:dict, params_to_test:list, NUM_TRIALS:int = 10):
     if os.path.exists(save_path) == False:
         os.makedirs(save_path, 0o666)
 
+    #Check whether process has been run before, if so load previous result dataframe
+    if new_run:
+        previous_run_df = None
+    else:
+        if pipeline['STEPS_COMPLETED']['Straw_Model']:
+            previous_run_df = pipeline['Straw_Model']['Results']
+        else:
+            previous_run_df = None
 
-    #Check whether param is used in the model
-    params_used = list(set(params_to_test) & set(X.columns.values))
-    test_list = ['No Shuffle'] + params_used
+    #Create test list
+    test_list = ['No Shuffle'] + params_to_test
+
+    #Remove from test list anything tested before
+    if previous_run_df is not None:
+        params_tested_before = previous_run_df['Feature'].unique()
+        final_test_list = [item for item in test_list if item not in params_tested_before]
+        
+    else:
+        final_test_list = test_list
+
+    #Check test list
+    if final_test_list == []:
+        print("\n #######  NO PARAMETERS TO TEST ########")
+        return pipeline
+
+    #create result df
     straw_result_df = pd.DataFrame(index = test_list, columns = ['Shuffled df', 'MAE_list', 'avg_MAE', 'avg_MAE_sd', 'spearman', 'spearman_sd', 'pearson', 'pearson_sd', 'pred', 'test'])
     straw_result_df.index.name = "Feature"
-
-
 
     shuffled_param = []
     itr_number = [] # create new empty list for itr number 
@@ -113,15 +148,18 @@ def main(pipeline:dict, params_to_test:list, NUM_TRIALS:int = 10):
 
 
     for param in test_list:
-
+        valid_cols = get_valid_columns(X, param)
+        if valid_cols ==[] and param != "No Shuffle":
+            continue
         for i in range(NUM_TRIALS):
             #shuffle column of interest
-            shuffled_X = shuffle_column(X, param, i)
+            shuffled_X, shuffled_col = shuffle_columns(X, valid_cols, i)
+            print(f"\n SHUFFLED: {shuffled_col}")
+            # shuffled_X, shuffled_col = shuffle_column(X, param, i)
 
-            
             #evaluate model with Kfold cross validation using shuffled training data
             MAE_list, acc, acc_sd, spearman, spearman_sd, pearson, pearson_sd, test, pred = evaluate_model(shuffled_X, y, model, N_CV, i)
-            shuffled_param.append(param)
+            shuffled_param.append(shuffled_col)
             itr_number.append(i)
             avg_MAE.append(acc)
             shuffled_X_list.append(shuffled_X)
@@ -137,6 +175,10 @@ def main(pipeline:dict, params_to_test:list, NUM_TRIALS:int = 10):
                                                         'Experimental_Transfection',
                                                         'Predicted_Transfection'])
 
+    #concat new and old result df
+    if previous_run_df is not None:
+        straw_result_df = pd.concat([previous_run_df, straw_result_df], axis=0).reset_index(inplace=True, drop = True)
+    
     #Save results to excel for user
     straw_result_df.to_excel(f'{save_path}Straw_model_results.xlsx')
 
@@ -157,7 +199,7 @@ def main(pipeline:dict, params_to_test:list, NUM_TRIALS:int = 10):
     pipeline['Straw_Model']['Results'] = straw_result_df
     pipeline['STEPS_COMPLETED']['Straw_Model'] = True
 
-    print("\n\n--- %s minutes for feature reduction---" % ((time.time() - start_time)/60))  
+    print("\n\n--- %s minutes for straw model analysis---" % ((time.time() - start_time)/60))  
 
     return pipeline
 

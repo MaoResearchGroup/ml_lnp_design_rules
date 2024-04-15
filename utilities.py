@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import statsmodels.stats.multicomp as mc
-from scipy.stats import spearmanr
+from scipy.stats import spearmanr, pearsonr
 import pickle
 from matplotlib import colors
 import os
@@ -128,8 +128,8 @@ def select_input_params(cell, method = None):
         formulation_param_names = ['NP_ratio',
                                     'PEG_(Chol+PEG)',
                                     '(IL+HL)',
-                                    'HL_(IL+HL)',
-                                    'Lipid_NA_ratio'] 
+                                    'HL_(IL+HL)']
+                                    # 'Lipid_NA_ratio'] 
     elif method == 'weight':
         formulation_param_names = ['wt_Helper', 'wt_Dlin',
                         'wt_Chol', 'wt_DMG', 'wt_pDNA'] 
@@ -361,6 +361,43 @@ def get_Model_Selection_Error(pipeline, loop):
     sorted_AE =ALL_AE[sorted_index]
 
     return sorted_AE
+
+def get_Model_Selection_performance(pipeline, loop, save):
+    #Collect error for all best models
+    model_list = pipeline['Model_Selection']['Model_list']
+    model_dict = {}
+    for model in model_list:
+        model_dict[model] = extraction_all(pipeline=pipeline, model_name=model, loop = loop)
+
+    # Dictionary to hold results
+    results = {}
+
+    # Compute metrics for each model and store in the results dictionary
+    results = {model_name: compute_performance_metrics(data, 'Predicted_Transfection', "Experimental_Transfection") for model_name, data in model_dict.items()}
+
+    # Organize results into a DataFrame and sort by MAE
+    results_df = pd.DataFrame(results, index=["MAE Mean", "MAE Std", "Spearman Correlation", "Pearson Correlation"])
+    results_df = results_df.T.sort_values("MAE Mean").T
+
+    # Save the DataFrame to a user-defined path
+    results_df.to_excel(save)
+
+    return results_df
+
+# Function to calculate the performance metrics
+def compute_performance_metrics(df, predicted_column, actual_column):
+    # Calculate Mean Absolute Error and its standard deviation
+    mae = (df[predicted_column] - df[actual_column]).abs()
+    mae_mean = mae.mean()
+    mae_std = mae.std()
+
+    # Calculate Spearman's correlation
+    spearman_corr, _ = spearmanr(df[predicted_column], df[actual_column])
+    
+    # Calculate Pearson's correlation
+    pearson_corr, _ = pearsonr(df[predicted_column], df[actual_column])
+    
+    return mae_mean, mae_std, spearman_corr, pearson_corr
 
 
 def get_best_model_cell(figure_save_path, model_folder, cell_type_list):

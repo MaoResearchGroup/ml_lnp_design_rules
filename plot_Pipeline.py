@@ -1,5 +1,5 @@
 import pickle
-from utilities import save_pipeline, truncate_colormap
+from utilities import save_pipeline, truncate_colormap, get_Model_Selection_performance
 import plotting_functions as plotter
 import os
 import matplotlib as plt
@@ -7,21 +7,20 @@ import matplotlib as plt
 def main():
 
         #Specify which plots to make
-        manuscript             = False
-        prelim                 = False
-        plot_f_distribution    = False
-        plot_model_selection   = False
-        feature_reduction      = False
+        manuscript             = True
+        prelim                 = True
+        plot_f_distribution    = True
+        plot_model_selection   = True
+        feature_reduction      = True
         straw_model            = True
         run_learning_curve     = False
-        redo_learning_curve    = False
-        run_SHAP_plots         = False
-        plot_bump              = False
+        run_SHAP_plots         = True
+        plot_bump              = True
 
 
-        RUN_NAME  = f"Runs/Percentage_PDI1_RLU2_Final/"
+        RUN_NAME  = f"Runs/Percentage_PDI1_RLU1.5_SIZE10000/"
 
-        # cell_type_list = ['N2a']
+        #cell_type_list = ['HEK293']
         cell_type_list = ['HepG2','B16',  'PC3', 'HEK293',  'N2a', 'ARPE19']
 
         shap_cmap = truncate_colormap(plt.cm.get_cmap('Greens'), 0.2, 0.8)
@@ -142,7 +141,9 @@ def main():
                         if os.path.exists(model_selection_save) == False:
                                 os.makedirs(model_selection_save, 0o666)
                         
-
+                        get_Model_Selection_performance(pipeline_results,
+                                                        loop= 'test',
+                                                        save = model_selection_save + "Performance_table.xlsx",)
                         plotter.plot_AE_Box(pipeline_results, model_selection_save, loop= 'test')
                         plotter.plot_predictions(pipeline_results, model_selection_save)
                         
@@ -154,16 +155,15 @@ def main():
                         
                 if straw_model:
                         print('\n########## STRAW MODEL PLOTTING')
-                        plotter.plot_straw_model(pipeline_results)
+                        straw_save = pipeline_results['Saving']['Figures'] + 'Straw_Model/'
+                        #Check save path
+                        if os.path.exists(straw_save) == False:
+                                os.makedirs(straw_save, 0o666)
+                        plotter.plot_bar_with_t_test(df = pipeline_results['Straw_Model']['Results'].copy(), save = straw_save, label_column= 'Feature', value_column= 'KFold Average MAE', feature_order=['Control'] + feature_plotting_order)
                 # Learning Curve 
                 if run_learning_curve:
                         print('\n########## LEARNING CURVE PLOTTING')
-                        #Timing (10 minutes)
-                        if pipeline_results['STEPS_COMPLETED']['Learning_Curve'] == False or redo_learning_curve:
-                                pipeline_results = plotter.get_learning_curve(pipeline_results, refined = False)
-                                
-                                save_pipeline(pipeline=pipeline_results, path = pipeline_path, 
-                                              step= 'LEARNING CURVE')
+
 
                         plotter.plot_learning_curve(pipeline_results)
 

@@ -7,7 +7,7 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib import colors
 from matplotlib.ticker import MultipleLocator
-from utilities import get_spearman, extract_training_data, run_tukey, extraction_all, get_Model_Selection_Error
+from utilities import get_spearman, extract_training_data, run_tukey, extraction_all, get_Model_Selection_Error,get_Model_Selection_performance
 from sklearn.decomposition import PCA
 from sklearn.model_selection import KFold
 from copy import deepcopy, copy
@@ -291,6 +291,7 @@ def tfxn_clustering(X, Y, input_params, figure_save, cell):
     plt.close()
 
 ########## MODEL SELECTION PLOTS ##################
+
 def plot_AE_Box(pipeline, save, loop = 'test'):
 
     #Retreive Data
@@ -300,8 +301,6 @@ def plot_AE_Box(pipeline, save, loop = 'test'):
 
     #convert AE to percent error
     error_df = df*100
-
-
 
     #Save data with figure
     df.to_csv(save + f"{cell}_Boxplot_dataset.csv", index = False)
@@ -388,22 +387,18 @@ def plot_predictions(pipeline, save, pred = None, exp = None, normalized = True,
 
         experimental = data['Experimental_Transfection']
         predicted = data['Predicted_Transfection']
-
-        if normalized:
-            lower_lim = -0.05
-            upper_lim = 1.05
-        else:
-            lower_lim = None
-            upper_lim = None
     else:
         experimental = exp
         predicted = pred
-        if normalized:
-            lower_lim = -0.05
-            upper_lim = 1.15
-        else:
-            lower_lim = None
-            upper_lim = None
+
+    
+    
+    if normalized:
+        lower_lim = -0.05
+        upper_lim = 1.15
+    else:
+        lower_lim = None
+        upper_lim = None
 
 
 
@@ -569,25 +564,20 @@ def plot_cell_comparision(pipeline_list, save):
     best_AE = pd.DataFrame()
     for pipe in pipeline_list:
         #Extract best model AE for each cell
-        # best_AE[pipe['Cell']] = pipe['Model_Selection']['NESTED_CV']['Absolute_Error'].iloc[:,0] 
-        best_AE[pipe['Cell']] = pipe['Model_Selection']['Best_Model']['MAE']
-    
+        best_AE[pipe['Cell']] = pipe['Model_Selection']['Best_Model']['Test_Absolute_Error']
     #convert data to percent error
     best_AE = best_AE*100
 
     #Sort DF by MAE
-    # sorted_col = best_AE.mean().sort_values()
-    sorted_col = best_AE.sort_values()
+    sorted_col = best_AE.mean().sort_values()
     best_AE = best_AE[sorted_col.index]
 
     #Plot
-    fig = plt.figure(figsize=(2.5,2.5))
+    fig = plt.figure(figsize=(2.5,1.7))
     sns.set_theme(font='Arial', font_scale= 2)
     palette = sns.color_palette("Set2", 6, as_cmap=False)
-    # sns.barplot(best_MAE)
 
     fontsize = 12
-    # bar = sns.barplot(data = best_AE, errorbar = 'sd', palette=palette, capsize = 0.15,errwidth=0.5,saturation = 0.5)
     bar = sns.boxplot(data = best_AE, 
                       palette=palette, 
                       saturation = 0.5, 
@@ -664,7 +654,7 @@ def tabulate_model_selection_results(pipeline_list,save):
         for model_name in model_list:
             
             #Combine the predictions and experimental transfection data into a single row
-            data = extraction_all(model_name, model_path, N_CV)
+            data = extraction_all(pipeline=pipe, model_name=model_name, loop = 'test')
             predicted    = data['Predicted_Transfection']
             experimental = data['Experimental_Transfection']
             AE           = data['Absolute_Error']
@@ -804,48 +794,138 @@ def plot_feature_reduction(pipeline):
     plt.savefig(save + f'{cell_type}_{model_name}_Feature_Reduction_Plot.svg', dpi=600, transparent = True, bbox_inches='tight')
     plt.close()
 
-def plot_straw_model(pipeline, palette = 'husl'):
-    cell = pipeline['Cell']
-    save = pipeline['Saving']['Figures']
-    df = pipeline['Straw_Model']['Results'].copy()
+# def plot_straw_model(pipeline, feature_order, palette = 'husl'):
+#     cell = pipeline['Cell']
+#     save = pipeline['Saving']['Figures']
+#     df = pipeline['Straw_Model']['Results'].copy()
 
 
-    #one-way T-test against the "No shuffle" control
-    control_values = df[df['Feature'] == 'No Shuffle']['KFold Average MAE']
+#     #one-way T-test against the "No shuffle" control
+#     control_values = df[df['Feature'] == 'No Shuffle']['KFold Average MAE']
+#     results = {}
+#     for group in df['Feature'].unique():
+#         if group != 'No Shuffle':
+#             group_values = df[df['Feature'] == group]['KFold Average MAE']
+#             t_stat, p_value_two_sided = stats.ttest_ind(control_values, group_values)
+
+#             # Adjust p-value for one-sided test (if the mean of sample1 is hypothesized to be less than sample2)
+#             if t_stat < 0:
+#                 p_value = p_value_two_sided / 2
+#             else:
+#                 p_value = 1 - (p_value_two_sided / 2)
+#             results[group] = p_value
+
+#     # Create the bar plot
+#     ax =  sns.barplot(data=df, x='Feature', y='KFold Average MAE', order=feature_order, errorbar = 'sd',capsize=.15,  palette=palette)
+#     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
+
+#     sns.stripplot(data=df, x='Feature', y='KFold Average MAE', order=feature_order, color="black", jitter=True, size=6, alpha=0.5)
+
+#     # Statistical Annotation (Student T test)
+#     annotation_buffer = .05
+#     for group, p_value in results.items():
+#         if p_value < 0.05:
+#             x1 = df['Feature'].unique().tolist().index('No Shuffle')
+#             x2 = df['Feature'].unique().tolist().index(group)
+#             y = df['KFold Average MAE'].max() + annotation_buffer
+#             plt.plot([x1, x1, x2, x2], [y - 0.02, y, y, y - 0.02], lw=1.5, c='black')
+#             plt.text((x1 + x2) * 0.5, y, f"p = {p_value:.2e}", ha='center', va='bottom')  # Adjust formatting as needed
+#             annotation_buffer = annotation_buffer + 0.05
+
+#     plt.savefig(save + f'{cell}_straw_model.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
+#     plt.close()
+
+#     return
+
+def perform_t_tests(df, label_column, value_column, control_name, test_type='one-way', p_value_threshold=0.05, output_excel='t_test_results.xlsx'):
+    # Retrieve control group values
+    control_values = df[df[label_column] == control_name][value_column]
     results = {}
-    for group in df['Feature'].unique():
-        if group != 'No Shuffle':
-            group_values = df[df['Feature'] == group]['KFold Average MAE']
-            t_stat, p_value_two_sided = stats.ttest_ind(control_values, group_values)
+    statistics = []
 
-            # Adjust p-value for one-sided test (if the mean of sample1 is hypothesized to be less than sample2)
-            if t_stat < 0:
-                p_value = p_value_two_sided / 2
-            else:
-                p_value = 1 - (p_value_two_sided / 2)
-            results[group] = p_value
+    # Append statistics for the control group
+    statistics.append({
+        'Group': control_name,
+        'Average Value': control_values.mean(),
+        'Standard Deviation': control_values.std(),
+        'P-Value': np.nan  # NaN because it does not compete against itself
+    })
 
-    # Create the bar plot
-    ax =  sns.barplot(data=df, x='Feature', y='KFold Average MAE', errorbar = 'sd',capsize=.15,  palette=palette)
+    # Process other groups and compare against control
+    for group in df[label_column].unique():
+        if group != control_name:
+            group_values = df[df[label_column] == group][value_column]
+            t_stat, p_value = stats.ttest_ind(control_values, group_values, nan_policy='omit')
+
+            # Adjust p-value based on the specified test type
+            if test_type == 'one-way':
+                p_value = p_value / 2 if t_stat < 0 else 1 - (p_value / 2)
+
+            # Collect results and statistics
+            results[group] = {'p_value': p_value, 'is_significant': p_value < p_value_threshold}
+            statistics.append({
+                'Group': group,
+                'Average Value': group_values.mean(),
+                'Standard Deviation': group_values.std(),
+                'P-Value': p_value
+            })
+
+    # Save results to Excel
+    df_stats = pd.DataFrame(statistics)
+    df_stats.to_excel(output_excel, index=False)
+
+    return results
+
+def plot_bar_with_t_test(df, save, feature_order, label_column, value_column, palette='husl', p_value_threshold=0.05, test_type = 'one-way'):
+
+    # Convert list values in the label column to strings, rename empty lists to 'Control'
+    df[label_column] = df[label_column].apply(lambda x: 'Control' if isinstance(x, list) and not x else ', '.join(x) if isinstance(x, list) else x)
+
+    # Perform one-way T-tests against the 'Control'
+    results = perform_t_tests(df, label_column, value_column, 'Control', test_type, p_value_threshold, save + 'straw_t_test_results.xlsx')
+
+    # Filter the feature_order to include only items present in the DataFrame
+    filtered_feature_order = [feature for feature in feature_order if feature in df[label_column].unique()]
+
+    # Append any features found in the DataFrame but not in the filtered feature_order
+    unique_features = df[label_column].unique()
+    missing_features = [feature for feature in unique_features if feature not in filtered_feature_order]
+    final_feature_order = filtered_feature_order + missing_features
+
+    # Create the bar plot with the final feature order
+    fig = plt.figure(figsize=(4, 3))
+    ax = sns.barplot(data=df, x=label_column, y=value_column, order=final_feature_order, errorbar='sd', capsize=.15, palette=palette)
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
-
-    sns.stripplot(data=df, x='Feature', y='KFold Average MAE', color="black", jitter=True, size=6, alpha=0.5)
+    sns.stripplot(data=df, x=label_column, y=value_column, order=final_feature_order, color="black", jitter=True, size=6, alpha=0.5)
 
     # Statistical Annotation (Student T test)
-    annotation_buffer = .05
-    for group, p_value in results.items():
-        if p_value < 0.05:
-            x1 = df['Feature'].unique().tolist().index('No Shuffle')
-            x2 = df['Feature'].unique().tolist().index(group)
-            y = df['KFold Average MAE'].max() + annotation_buffer
-            plt.plot([x1, x1, x2, x2], [y - 0.02, y, y, y - 0.02], lw=1.5, c='black')
-            plt.text((x1 + x2) * 0.5, y, f"p = {p_value:.2e}", ha='center', va='bottom')  # Adjust formatting as needed
-            annotation_buffer = annotation_buffer + 0.05
+    annotate_barplot_with_pvalues(ax, df, results, label_column, value_column, p_value_threshold)
 
-    plt.savefig(save + f'{cell}_straw_model.svg', dpi=600, format = 'svg',transparent=True, bbox_inches = 'tight')
+    plt.savefig(save + f'Straw_model_bar.svg', dpi=600, format='svg', transparent=True, bbox_inches='tight')
     plt.close()
 
-    return
+def annotate_barplot_with_pvalues(ax, df, results, x_col, y_col, threshold):
+    annotation_buffer = .05
+    unique_features = df[x_col].unique().tolist()
+    y_max = df[y_col].max()
+
+    for group, result in results.items():
+        p_value = result['p_value']
+        if p_value < threshold:
+            x1 = unique_features.index('Control')
+            x2 = unique_features.index(group)
+            y = y_max + annotation_buffer
+            star = '***' if p_value < 0.001 else '**' if p_value < 0.01 else '*'
+            ax.plot([x1, x1, x2, x2], [y - 0.02, y, y, y - 0.02], lw=1.5, c='black')
+            ax.text((x1 + x2) * 0.5, y, star, ha='center', va='bottom')
+            annotation_buffer += 0.05
+
+    # Adding legend for significance levels
+    handles, labels = ax.get_legend_handles_labels()
+    labels += ['* p < 0.05', '** p < 0.01', '*** p < 0.001']
+    handles += [plt.Line2D([], [], color='black', marker='_', linestyle='None')]*3
+    ax.legend(handles, labels, loc='upper right', frameon=False)
+
 ############ LEARNING CURVE ##################
 def get_learning_curve(pipeline, refined = False, NUM_ITER =5, num_splits =5, num_sizes= 50):
 

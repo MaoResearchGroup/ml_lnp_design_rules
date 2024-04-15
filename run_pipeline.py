@@ -1,4 +1,5 @@
 from utilities import extract_training_data, init_pipeline, save_pipeline
+import plotting_functions as plotter
 from run_Model_Selection import run_Model_Selection
 import Feature_reduction
 import straw_model
@@ -11,35 +12,37 @@ import os
 def main():
   ################ What parts of the pipeline to run ###############
   #Make New pipeline
-  new_pipeline = False
+  new_pipeline = True
   
   #Parts to Run/Update
   run_preprocessing     = False
   run_model_selection   = False
-  run_feature_reduction = True
-  run_straw_model       = False
+  run_feature_reduction = False
+  run_straw_model       = True
+  run_learning_curve    = False
   run_SHAP_explain      = False
   
+  redo_learning_curve   = False
   #Cell types to Run
-  cell_type_list = ['HepG2']
-  # cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
+  #cell_type_list = ['PC3']
+  cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
 
   
   ############### PARAMETERS ###############################
-  # model_list = ['RF','LGBM', 'XGB']
+  # model_list = ['LGBM', 'RF', 'XGB']
   model_list = ['RF','LGBM', 'XGB', 'DT', 'MLR', 'lasso', 'PLS', 'kNN', 'MLP']
-  formula_type = 'percentage' #options: ratio, percent, weight
-  RLU_floor = 2
-  size_cutoff = 100000
+  formula_type = 'percent' #options: ratio, percent, weight
+  RLU_floor = 1.5
+  size_cutoff = 10000
   PDI_cutoff = 1 #Use 1 to include all data
 
   N_CV = 5
   prefix = "RLU_" #WARNING: HARDCODED
 
   ################ SAVING, LOADING##########################
-  RUN_NAME                  = f"Runs/Percentage_PDI{PDI_cutoff}_RLU{RLU_floor}_Final/"
+  RUN_NAME                  = f"Runs/Percentage_PDI{PDI_cutoff}_RLU{RLU_floor}_SIZE{size_cutoff}/"
   #RUN_NAME                  = f"Runs/Models_Final_All_Size_PDI{PDI_cutoff}_keep_Zeta_RLU{RLU_floor}"
-  data_file_path            = 'Raw_Data/Final_Master_Formulas_updated.csv' #Where to extract training data
+  data_file_path            = 'Raw_Data/Percentage_Master_Formulas.csv' #Where to extract training data
 
 
   ################ Model Training and Analysis ##########################
@@ -71,6 +74,8 @@ def main():
       run_preprocessing     = True
       run_model_selection   = True
       run_feature_reduction = True
+      run_straw_model       = True
+      run_learning_curve    = True
       run_SHAP_explain      = True
 
     ##################### Extract Training Data ###############################
@@ -99,21 +104,39 @@ def main():
     
     if run_straw_model:
       #Timing (Estimated 5-10min per cell)
-
-      HL_features =  ['P_charged_centers', 
-                         'N_charged_centers', 
-                         'cLogP', 
-                         'Hbond_D', 
-                         'Hbond_A', 
-                         'Total_Carbon_Tails', 
-                         'Double_bonds']
+      composition_features = ['HL_(IL+HL)',
+                                  '(IL+HL)',
+                                'PEG_(Chol+PEG)',
+                                'NP_ratio']
+      HL_features = ['Lipid_NA_ratio',
+                                'P_charged_centers', 
+                                'N_charged_centers', 
+                                'cLogP', 
+                                'Hbond_D', 
+                                'Hbond_A', 
+                                'Total_Carbon_Tails', 
+                                'Double_bonds']
+      NP_features = ['Size', 
+                                'PDI',
+                                'Zeta']
 
       pipeline_dict = straw_model.main(pipeline=pipeline_dict,
-                                        params_to_test= ['HL_(IL+HL)',
-                                        '(IL+HL)'] + HL_features)
+                                        params_to_test= composition_features + HL_features + NP_features + [HL_features] + [NP_features],
+                                        NUM_TRIALS= 20,
+                                        new_run=True)
 
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
                     step = 'STRAW MODEL')
+    if run_learning_curve:      
+      #Timing (10 minutes per cell)
+      if pipeline_dict['STEPS_COMPLETED']['Learning_Curve'] == False or redo_learning_curve:
+              pipeline_dict = plotter.get_learning_curve(pipeline_dict, refined = False)
+              
+              save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
+                            step= 'LEARNING CURVE')
+    
+    
+    
     #################### SHAP Analysis #####################################
     if run_SHAP_explain:
       #Timing (Estimated 1 minute per cell)
