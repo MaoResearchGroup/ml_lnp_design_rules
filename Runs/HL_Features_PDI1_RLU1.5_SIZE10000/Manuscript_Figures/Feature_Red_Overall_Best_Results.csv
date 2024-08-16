@@ -1,0 +1,7 @@
+﻿,B16,HepG2,PC3,HEK293,N2a,ARPE19
+Model_Name,LGBM,LGBM,RF,LGBM,LGBM,LGBM
+Retained_Features,"['P_charged_centers', 'cLogP', 'Hbond_D', 'Hbond_A', 'Total_Carbon_Tails', 'Double_bonds', 'NP_ratio', 'PEG_(Chol+PEG)', '(IL+HL)', 'HL_(IL+HL)']","['P_charged_centers', 'cLogP', 'Hbond_D', 'Double_bonds', 'NP_ratio', 'PEG_(Chol+PEG)', '(IL+HL)', 'HL_(IL+HL)']","['P_charged_centers', 'N_charged_centers', 'cLogP', 'Hbond_D', 'Hbond_A', 'Double_bonds', 'NP_ratio', 'PEG_(Chol+PEG)', '(IL+HL)', 'HL_(IL+HL)']","['P_charged_centers', 'cLogP', 'Hbond_D', 'Hbond_A', 'Double_bonds', 'NP_ratio', 'PEG_(Chol+PEG)', '(IL+HL)', 'HL_(IL+HL)']","['P_charged_centers', 'N_charged_centers', 'cLogP', 'Hbond_D', 'Double_bonds', 'NP_ratio', 'PEG_(Chol+PEG)', '(IL+HL)', 'HL_(IL+HL)']","['P_charged_centers', 'Hbond_A', 'NP_ratio', 'PEG_(Chol+PEG)', '(IL+HL)', 'HL_(IL+HL)']"
+# of Features,10,8,10,9,9,6
+MAE,0.04894727782786021,0.057140818117241546,0.05664852237187092,0.08048116296129823,0.05810167481210089,0.08793076605748555
+Spearman,0.9248249750056612,0.7409595730090215,0.6916683758165755,0.8470937454010997,0.8945450437601394,0.8841847905984643
+Pearson,0.9374139732775066,0.8794751462619296,0.8929634749016749,0.8300531098420972,0.9146845797521299,0.8881009544914373
