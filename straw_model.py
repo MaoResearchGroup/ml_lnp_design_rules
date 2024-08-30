@@ -20,6 +20,14 @@ from copy import deepcopy
 import time 
 
 
+"""
+straw_model script
+
+- Used to test straw models where certain groups of feature values are randomly shuffled
+- results saved in the run directory
+
+"""
+
 def get_valid_columns(df, cols):
     if isinstance(cols, str) and cols in df.columns:
         # Single column name provided as a string

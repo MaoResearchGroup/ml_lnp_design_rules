@@ -13,7 +13,14 @@ from sklearn.manifold import TSNE
 from copy import deepcopy
 
 
-"""**MAIN**"""
+"""
+get_shap_explainations main
+
+- generates SHAP explainations for optimal models selected by the model selection process
+- Save data within the pipeline dictionary and as csv within the run directory
+"""
+
+
 def main(pipeline, N_bins, refined = True):
   print('\n###########################\n\n RUNNING SHAP EXPLANATIONS')
   start_time = time.time()

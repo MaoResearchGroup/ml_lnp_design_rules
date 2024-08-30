@@ -19,6 +19,15 @@ from sklearn.metrics import mean_absolute_error
 from copy import deepcopy
 import time
 
+
+"""
+Feature_reduction
+
+- Test model performance after the removal of features, if removal of feature does not negatively impact performance, then it is removed from the training data
+- Outputs models trained on a refined dataset
+- Results save within the run dictionary and run directory
+
+"""
 def feature_correlation(X, cell, save):
     
     fig = plt.figure(figsize=(12, 8))
@@ -337,7 +346,7 @@ def evaluate_model(X,y, selected_features, model, N_CV = 5, repeats = 5):
     for i in range(repeats):
         pred_list = []
         test_list = []
-        Kfold = KFold(n_splits=N_CV, random_state= i + 100, shuffle=True)
+        Kfold = KFold(n_splits=N_CV, random_state= i + 40, shuffle=True)
         for j, (train_index, test_index) in enumerate(Kfold.split(X)):
             #Split X
             X_train = selected_X.iloc[train_index]

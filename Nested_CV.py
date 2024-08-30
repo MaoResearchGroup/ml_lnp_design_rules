@@ -25,18 +25,15 @@ from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from sklearn.neural_network import MLPRegressor
-#from ngboost import NGBRegressor
-
-
 
 
 class NESTED_CV:
   
     """
     NESTED_CV Class:
-    - based on a dataset for long acting injectible (LAI) drug delivey systems
+    - based on a pipeline developed for long acting injectible (LAI) drug delivey systems by the Aspuru-Guzik Group https://github.com/aspuru-guzik-group/long-acting-injectables
     - once model type is selected, NEST_CV will be conducted, data is split as follows:
-          - Hold-out set - 15% of the total data will be randomly split for final hold-out validation
+          - Hold-out set - 15% of the total data will be randomly split stratified by helper lipid class for final hold-out validation
           - Outer loop (test) - 5 K fold split of the remaining 85% (68% training, 17% validation) for model training
           - inner loop (hyperparameter optimization) - Final K fold split of the remaining 68% training set for HP hoptimization
     - prints progress and reults at the end of each loop
@@ -171,14 +168,17 @@ class NESTED_CV:
 
         # Split CV loop model development set and final hold-out test set (Fully insulated from any training data)
         indices = self.X.index
-        cv_idx, test_idx, _,_ = train_test_split(indices, self.y, test_size= 0.15, random_state= 4, stratify= self.HL, shuffle= True)
+
+        #Stratified such that the hold-out contains equal presence of all HL
+        cv_idx, test_idx, _,_ = train_test_split(indices, self.y, test_size= 0.15, random_state= 4, stratify= self.HL, shuffle= True) 
+       
         
         self.X_cv_loop, self.X_final_test, = self.X.iloc[cv_idx], self.X.iloc[test_idx]
         self.y_cv_loop, self.y_final_test  = self.y.iloc[cv_idx], self.y.iloc[test_idx]
         self.F_cv_loop, self.F_final_test  = self.F.iloc[cv_idx], self.F.iloc[test_idx]
         
         # Nested CV
-        cv_outer = KFold(n_splits = NUM_TRIALS , random_state= 100, shuffle=True) # Kfold split of the developemnt dataset
+        cv_outer = KFold(n_splits = NUM_TRIALS , random_state= 42, shuffle=True) # Kfold split of the developemnt dataset
 
 
         for i, (train_index, test_index) in enumerate(cv_outer.split(self.X_cv_loop)):

@@ -9,6 +9,8 @@ from matplotlib import colors
 import os
 from copy import copy, deepcopy
 
+
+
 def init_pipeline(pipeline_path, RUN_NAME, cell, param_type, chemical_type, data_file_path, size_cutoff, PDI_cutoff,prefix, RLU_floor,N_CV, model_list ):
     
     print('\n\n########## INITIALIZING NEW PIPELINE ##############\n\n')
@@ -67,8 +69,10 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, param_type, chemical_type, data
                             'Predictions' : None,
                             'MAE': None,
                             'Spearman':None,
-                            'Pearson': None
-                            }
+                            'Pearson': None,
+                            'HL_1': None
+                            },
+                            
                         },
                     'Feature_Reduction':{
                         'Refined_Params': None,

@@ -1,6 +1,7 @@
 from utilities import extract_training_data, init_pipeline, save_pipeline
 import plotting_functions as plotter
 from run_Model_Selection import run_Model_Selection
+import HL_1_performance
 import Feature_reduction
 import straw_model
 import get_shap_explainations
@@ -9,30 +10,46 @@ import os
 
 
 
+"""
+run_pipeline script
+
+- Used to generate explainable ML models for LNP transfection prediction
+- Can control which parts of the pipeline to run and related data saving procedures
+- user input required for datapreprocessing, cell lists, and model lists
+
+"""
+
 def main():
+
+
+
+
   ################ What parts of the pipeline to run ###############
   #Make New pipeline
   new_pipeline = False
   
   #Parts to Run/Update
-  run_preprocessing     = True
-  run_model_selection   = True
-  run_feature_reduction = True
-  run_straw_model       = True
+  run_preprocessing     = False
+  run_model_selection   = False
+  run_HL_1              = False
+  run_feature_reduction = False
+  run_straw_model       = False
   run_learning_curve    = True
-  run_SHAP_explain      = True
+  run_SHAP_explain      = False
   
-  redo_learning_curve   = False
+  redo_learning_curve   = True
   #Cell types to Run
-
-  cell_type_list = ['B16', 'HepG2','HEK293', 'N2a', 'ARPE19', 'PC3']
+  cell_type_list = ['B16', 'HepG2', 'HEK293', 'N2a', 'ARPE19', 'PC3']
+  # cell_type_list = ['B16', 'HepG2','HEK293', 'N2a', 'ARPE19', 'PC3']
 
   
   ############### PARAMETERS ###############################
+  #model_list = ['LGBM']
+
   model_list = ['RF','LGBM', 'XGB', 'DT', 'MLR', 'lasso', 'PLS', 'kNN', 'MLP']
   formula_type = 'percent' #options: ratio, percent, weight
 
-  chemical_features = 'blended'       # options: HL, OHE, blended
+  chemical_features = 'OHE'       # options: HL, OHE, blended
 
   RLU_floor = 1.5
   size_cutoff = 10000
@@ -42,7 +59,7 @@ def main():
   prefix = "RLU_" # "RLU_" #WARNING: HARDCODED RLU
 
   ################ SAVING, LOADING##########################
-  RUN_NAME                  = f"Runs/{chemical_features}_Features_PDI{PDI_cutoff}_RLU{RLU_floor}_SIZE{size_cutoff}/"
+  RUN_NAME                  = f"Runs/Final_{chemical_features}_Features_PDI{PDI_cutoff}_RLU{RLU_floor}_SIZE{size_cutoff}/"
 
   data_file_path            = 'Raw_Data/1080_LNP_OHE.csv' #Where to extract training data
 
@@ -75,10 +92,11 @@ def main():
       #Run Whole Pipeline
       run_preprocessing     = True
       run_model_selection   = True
-      run_feature_reduction = True
-      run_straw_model       = True
-      run_learning_curve    = True
-      run_SHAP_explain      = True
+      run_HL_1              = True
+      run_feature_reduction = False
+      run_straw_model       = False
+      run_learning_curve    = False
+      run_SHAP_explain      = False
 
     ##################### Extract Training Data ###############################
     if run_preprocessing:
@@ -96,7 +114,12 @@ def main():
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
                     step = 'MODEL SELECTION')
       
+    if run_HL_1:
+       #Timing (Estimate 5 min per cell)
+      pipeline_dict, _ = HL_1_performance.main(pipeline_dict)
 
+      save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
+                    step = 'MODEL SELECTION')
     #################### Feature Reduction #####################################
     if run_feature_reduction:
       #Timing (Estimated 1-2hr per cell)
@@ -153,10 +176,10 @@ def main():
       #Timing (Estimated 1-2 minute per cell)
 
       #refined features
-      pipeline_dict, _,_,_,_ = get_shap_explainations.main(pipeline_dict, 20, refined = True)
+      pipeline_dict, _,_,_,_ = get_shap_explainations.main(pipeline_dict, N_bins = 10, refined = True)
 
       #All features
-      pipeline_dict, _,_,_,_ = get_shap_explainations.main(pipeline_dict, 20, refined = False)
+      pipeline_dict, _,_,_,_ = get_shap_explainations.main(pipeline_dict, N_bins = 10, refined = False)
       
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
                     step = 'SHAP')                      

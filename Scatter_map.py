@@ -3,8 +3,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 from six import string_types
-
-from seaborn.utils import despine, axis_ticklabels_overlap, relative_luminance, to_utf8
+from seaborn.utils import despine, axis_ticklabels_overlap,
 
 class _ScatterMapper(_HeatMapper):
     """

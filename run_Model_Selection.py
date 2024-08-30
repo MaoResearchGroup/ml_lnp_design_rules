@@ -6,18 +6,20 @@ import time
 from utilities import get_Model_Selection_Error
 from copy import deepcopy
 
+"""
+Function that:
+- runs the NESTED_CV for a desired cell typeand model panel for a given number of folds
+- prints status and progress of NESTED_CV
+- formats the results as a datafarme, and saves them locally
+- assigns the best HPs to the model, trains, and saves its locally
+- returns the results and updates the pipeline dictionary
+- prints time required for this step
+"""
+
 
 def run_Model_Selection(pipeline):
 
-  """
-  Function that:
-  - runs the NESTED_CV for a desired cell typeand model panel for a given number of folds
-  - prints status and progress of NESTED_CV
-  - formats the results as a datafarme, and saves them locally
-  - assigns the best HPs to the model, trains, and saves its locally
-  - returns the results and updates the pipeline dictionary
-  - prints time required for this step
-  """
+
   print('\n###########################\n\n MODEL SELECTION AND OPTIMIZATION')
   start_time = time.time()
 

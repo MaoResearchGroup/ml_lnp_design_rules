@@ -18,6 +18,15 @@ from itertools import chain
 from matplotlib.colors import Normalize
 from Scatter_map import scattermap
 
+
+"""
+plotting_functions
+
+- contains all the custom plotting functions used for this study
+
+"""
+
+
 ########## INITIAL FEATURE ANALYSIS PLOTS ##################
 def tfxn_heatmap(pipeline_list, save, helper_lipid = False):
     plt.rcParams["font.family"] = "Arial"
@@ -543,10 +552,12 @@ def tabulate_model_selection_results(pipeline_list,save):
 
     #initialize dataframes
     df_MAE = pd.DataFrame(index = all_model_list, columns = cell_type_list)
+    df_AE = pd.DataFrame(columns = cell_type_list)
     df_spearman = pd.DataFrame(index = all_model_list, columns = cell_type_list)
     df_pearson = pd.DataFrame(index = all_model_list, columns = cell_type_list)
 
-    df_best_cell_model = pd.DataFrame(index = ['Model_Name','Hyper_Params', 'MAE', 'Spearman', 'Pearson'], columns = cell_type_list)
+    df_best_cell_model = pd.DataFrame(index = ['Model_Name','Hyper_Params', 'n_samples', 'MAE', 'MAE_std', 'Spearman', 'Pearson'], columns = cell_type_list)
+    
 
     for pipe in pipeline_list:
         cell = pipe['Cell']
@@ -555,6 +566,8 @@ def tabulate_model_selection_results(pipeline_list,save):
         model_path = pipe['Saving']['Models']
 
         best_model_name = pipe['Model_Selection']['Best_Model']['Model_Name']
+
+        
 
         for model_name in model_list:
             
@@ -568,6 +581,8 @@ def tabulate_model_selection_results(pipeline_list,save):
             pearson = stats.pearsonr(predicted, experimental)[0]
             spearman = stats.spearmanr(predicted, experimental)[0]
             MAE = AE.mean()
+            MAE_std = AE.std()
+            n_samples = len(AE)
 
             #update DF
             df_pearson.at[model_name, cell] = pearson
@@ -577,19 +592,27 @@ def tabulate_model_selection_results(pipeline_list,save):
             #Update best model table
             if model_name == best_model_name:
                 df_best_cell_model.at['Model_Name', cell] = model_name
+                df_best_cell_model.at['n_samples', cell] = n_samples
                 df_best_cell_model.at['MAE', cell] = MAE
+                df_best_cell_model.at['MAE_std', cell] = MAE_std
                 df_best_cell_model.at['Spearman', cell] =spearman
                 df_best_cell_model.at['Pearson', cell] =pearson
                 df_best_cell_model.at['Hyper_Params', cell] = pipe['Model_Selection']['Best_Model']['Hyper_Params']
-    
+
+                df_AE[cell] = AE
+
+    #Save the AE results for additional plotting (outside of script)
+
+    with open(save + f"Best_Cell_and_Model_AE.csv", 'w', encoding = 'utf-8-sig', newline='') as f:
+        df_AE.to_csv(f)
     ########## Tabulate Results ##################
-    with open(save + "Model_Selection_MAE.csv", 'w', encoding = 'utf-8-sig') as f:
+    with open(save + "Model_Selection_MAE.csv", 'w', encoding = 'utf-8-sig',newline='') as f:
         df_MAE.to_csv(f)
-    with open(save + "Model_Selection_spearman.csv", 'w', encoding = 'utf-8-sig') as f:
+    with open(save + "Model_Selection_spearman.csv", 'w', encoding = 'utf-8-sig',newline='') as f:
         df_spearman.to_csv(f)
-    with open(save + "Model_Selection_pearson.csv", 'w', encoding = 'utf-8-sig') as f:
+    with open(save + "Model_Selection_pearson.csv", 'w', encoding = 'utf-8-sig',newline='') as f:
         df_pearson.to_csv(f)   
-    with open(save + "Model_Selection_Overall_Best_Results.csv", 'w', encoding = 'utf-8-sig') as f:
+    with open(save + "Model_Selection_Overall_Best_Results.csv", 'w', encoding = 'utf-8-sig',newline='') as f:
         df_best_cell_model.to_csv(f)   
     
     print('\nSaved All Model Selection Tables')
@@ -656,6 +679,7 @@ def plot_feature_reduction(pipeline):
     # Customize ticks and spines
     ax1.xaxis.set_major_locator(MultipleLocator(2))
     ax2.yaxis.set_minor_locator(MultipleLocator(0.05))
+    
     # Legend
     lines, labels = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()

@@ -11,6 +11,15 @@ import os
 import utilities as util
 import matplotlib.pyplot as plt
 
+
+"""
+validate_predictions
+
+- Takes unseen validation data provided by the user and evaluates model performance on this dataset
+- Generates a proposed validation set using a grid search approach for the dataset used in this study
+"""
+
+
 def init_validation_dict(pipeline, pipeline_save):
     print('\n\n########## INITIALIZING NEW VALIDATION DICT ##############\n\n')
     RUN_NAME = pipeline['Saving']['RUN_NAME']
@@ -379,14 +388,16 @@ def import_and_plot_validation_list(pipeline, path):
 
 
 def main():
-    
+
+
     ################ What parts of the pipeline to run ###############
-    RUN_NAME  = f"Runs/blended_Features_PDI1_RLU1.5_SIZE10000/"
+    RUN_NAME  = f"Runs/Final_HL_Features_PDI1_RLU1.5_SIZE10000/"
    
     VALIDATION_DATA_PATH = "Raw_Data/Compiled_validation.xlsx"
     
     
     new_validation = True
+
     #Parts to Run/Update
     run_validation_array            = True
     run_validation_set_selection    = False
@@ -396,7 +407,6 @@ def main():
 
     
     cell_type_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
-    # multiplex_cell_list = ['HepG2','HEK293', 'N2a', 'ARPE19','B16', 'PC3']
 
 
     for c in cell_type_list:
