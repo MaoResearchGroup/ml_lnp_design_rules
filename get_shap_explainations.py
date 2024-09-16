@@ -38,9 +38,8 @@ def main(pipeline, N_bins, refined = True):
   
   shap_save_path = pipeline['Saving']['SHAP']
 
-  #check if feature reduction was conducted
-  if refined:
-    if pipeline['STEPS_COMPLETED']['Feature_Reduction']:
+  #check if feature reduction was conducted, if so, then refined parameters can be used, else default to unrefined parameters
+  if pipeline['STEPS_COMPLETED']['Feature_Reduction'] and refined:
       input_params = pipeline['Feature_Reduction']['Refined_Params']
       input_param_type = 'refined'
   else:
