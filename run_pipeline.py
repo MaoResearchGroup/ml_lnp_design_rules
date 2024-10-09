@@ -22,8 +22,6 @@ run_pipeline script
 def main():
 
 
-
-
   ################ What parts of the pipeline to run ###############
   #Make New pipeline
   new_pipeline = False
@@ -39,27 +37,27 @@ def main():
   
   redo_learning_curve   = True
   #Cell types to Run
-  cell_type_list = ['B16', 'HepG2', 'HEK293', 'N2a', 'ARPE19', 'PC3']
+  cell_type_list = ['B16']
   # cell_type_list = ['B16', 'HepG2','HEK293', 'N2a', 'ARPE19', 'PC3']
 
   
   ############### PARAMETERS ###############################
-  #model_list = ['LGBM']
+  model_list = ['LGBM']
 
-  model_list = ['RF','LGBM', 'XGB', 'DT', 'MLR', 'lasso', 'PLS', 'kNN', 'MLP']
+  # model_list = ['RF','LGBM', 'XGB', 'DT', 'MLR', 'lasso', 'PLS', 'kNN', 'MLP']
   formula_type = 'percent' #options: ratio, percent, weight
 
-  chemical_features = 'OHE'       # options: HL, OHE, blended
+  chemical_features = 'HL'       # options: HL, OHE, blended
 
   RLU_floor = 1.5
   size_cutoff = 10000
   PDI_cutoff = 1 #Use 1 to include all data
 
   N_CV = 5
-  prefix = "RLU_" # "RLU_" #WARNING: HARDCODED RLU
+  prefix = "RLU_" # "RLU_"
 
   ################ SAVING, LOADING##########################
-  RUN_NAME                  = f"Runs/Final_{chemical_features}_Features_PDI{PDI_cutoff}_RLU{RLU_floor}_SIZE{size_cutoff}/"
+  RUN_NAME                  = f"Runs/example_{chemical_features}_Features_PDI{PDI_cutoff}_RLU{RLU_floor}_SIZE{size_cutoff}/"
 
   data_file_path            = 'Raw_Data/1080_LNP_OHE.csv' #Where to extract training data
 
@@ -93,10 +91,10 @@ def main():
       run_preprocessing     = True
       run_model_selection   = True
       run_HL_1              = True
-      run_feature_reduction = False
-      run_straw_model       = False
-      run_learning_curve    = False
-      run_SHAP_explain      = False
+      run_feature_reduction = True
+      run_straw_model       = True
+      run_learning_curve    = True
+      run_SHAP_explain      = True
 
     ##################### Extract Training Data ###############################
     if run_preprocessing:

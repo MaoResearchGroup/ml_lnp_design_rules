@@ -308,7 +308,7 @@ def main(pipeline):
     
     - Used to evaluate leave-one-lipid-out model performance
     - This provides sample performance metrics of model performance on novel lipid structures
-
+    
     """
     
     print('\n###########################\n\n RUNNING HL HOLD-ONE-OUT EVALUATION')
@@ -322,7 +322,7 @@ def main(pipeline):
     X = pipeline['Data_preprocessing']['X'].copy()
     y = pipeline['Data_preprocessing']['y'].copy()
 
-    result_save_path = pipeline['Saving']['Models'] + f'/HL-1/'
+    result_save_path = pipeline['Saving']['base'] + 'HL-1'
 
     #Check save path
     if os.path.exists(result_save_path) == False:

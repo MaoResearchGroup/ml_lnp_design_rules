@@ -15,11 +15,12 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, param_type, chemical_type, data
     
     print('\n\n########## INITIALIZING NEW PIPELINE ##############\n\n')
     #Saving/Loading
-    model_save_path           = f"{RUN_NAME}{cell}/Trained_Models/" # Where to save model, results, and training data 
-    refined_model_save_path   = f"{RUN_NAME}{cell}/Feature_Reduction/" #where to save refined model and results
-    shap_value_save_path      = f'{RUN_NAME}{cell}/SHAP_Values/'
-    straw_save_path           = f'{RUN_NAME}{cell}/Straw_Models/'
-    figure_save_path          = f"{RUN_NAME}{cell}/Figures/" #where to save figures
+    base_save_path            = f"{RUN_NAME}{cell}/"                 # Base save path for all results related to these model
+    model_save_path           = f"{base_save_path}Trained_Models/" # Where to save model, results, and training data 
+    refined_model_save_path   = f"{base_save_path}Feature_Reduction/" #where to save refined model and results
+    shap_value_save_path      = f'{base_save_path}SHAP_Values/'
+    straw_save_path           = f'{base_save_path}Straw_Models/'
+    figure_save_path          = f"{base_save_path}Figures/" #where to save figures
     
     #Input_Params
     input_param_names = select_input_params(cell = cell, method = param_type, chemical_features = chemical_type)
@@ -37,6 +38,7 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, param_type, chemical_type, data
                         },
                     'Saving':{
                         'RUN_NAME': RUN_NAME,
+                        'base': base_save_path,
                         'Models': model_save_path,
                         'Refined_Models': refined_model_save_path,
                         'Straw_Models': straw_save_path,
