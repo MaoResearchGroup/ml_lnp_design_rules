@@ -1,6 +1,8 @@
 # ml_lnp_design_rules
 Machine Learning Pipeline to predict LNP transfection efficiency and Analyze LNP design rules
 
+![alt text](https://github.com/MaoResearchGroup/ml_lnp_design_rules/main/ML_LNP_TOC_Graphic_Cells.png?raw=true)
+
 Structure of Repository and Code:
 
 * Raw_Data directory contains relevant datasets used for model training and validation
