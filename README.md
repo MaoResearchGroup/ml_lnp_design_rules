@@ -1,6 +1,8 @@
 # ml_lnp_design_rules
 Machine Learning Pipeline to predict LNP transfection efficiency and Analyze LNP design rules
 
+![alt text](https://github.com/MaoResearchGroup/ml_lnp_design_rules/main/ML_LNP_TOC_Graphic_Cells.png?raw=true)
+
 Structure of Repository and Code:
 
 * Raw_Data directory contains relevant datasets used for model training and validation
@@ -12,6 +14,8 @@ Structure of Repository and Code:
 * Each cell type directory contains directories related to different aspects of the ML pipeline (see below):
 
   * Trained_models: Model hyperparameter tuning and trained models
+  
+  * HL_1 : leave-one-lipid-out or helper lipid minus one analysis of optimized models
   
   * Feature_Reduction : training data and results for feature reduction/refinement procedures
   
@@ -25,7 +29,7 @@ Structure of Repository and Code:
 
 To run code:
 
-  * ML_LNP.yml provided to set up conda enviroment. This code has been tested on Windows.
+  * ML_LNP.yml provided to set up conda enviroment. This code has been tested on Windows10.
   
   * run_pipeline.py runs the machine learning pipeline on a provided dataset in the Raw_Data directory. Change run parameters as needed at the top of the main function. Pipelines will be saved in the Runs folder.
   
