@@ -1,15 +1,19 @@
 # ml_lnp_design_rules
-Machine Learning Pipeline to predict LNP transfection efficiency and Analyze LNP design rules
+**Machine Learning Pipeline to predict LNP transfection efficiency and Analyze LNP design rules**
 
-![alt text](https://github.com/MaoResearchGroup/ml_lnp_design_rules/main/ML_LNP_TOC_Graphic_Cells.png?raw=true)
+[Manuscript](https://pubs.acs.org/doi/full/10.1021/acsnano.4c07615#)
 
-Structure of Repository and Code:
+![ML LNP TOC Graphic_Cells (2)](https://github.com/user-attachments/assets/e1208206-9ebe-4319-aeca-0d5b7fd6cce6)
+
+
+**Structure of Repository and Code:**
 
 * Raw_Data directory contains relevant datasets used for model training and validation
   
 * Runs directory contains different pipeline runs (using different datasets)
   
-* Within each run there are subdirectories for related results for models trained on each individual cell type datasets
+* Within each run there are subdirectories for related results and figures for models trained on each individual cell type datasets and cell-wise comparison figures folder.
+  
   
 * Each cell type directory contains directories related to different aspects of the ML pipeline (see below):
 
@@ -27,7 +31,7 @@ Structure of Repository and Code:
       
       
 
-To run code:
+**To run code:**
 
   * ML_LNP.yml provided to set up conda enviroment. This code has been tested on Windows10.
   
