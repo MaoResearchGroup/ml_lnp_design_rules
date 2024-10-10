@@ -13,6 +13,8 @@ Structure of Repository and Code:
 
   * Trained_models: Model hyperparameter tuning and trained models
   
+  * HL_1 : leave-one-lipid-out or helper lipid minus one analysis of optimized models
+  
   * Feature_Reduction : training data and results for feature reduction/refinement procedures
   
   * SHAP_Values: Calculated SHAP values for feature importance and design rules
@@ -25,7 +27,7 @@ Structure of Repository and Code:
 
 To run code:
 
-  * ML_LNP.yml provided to set up conda enviroment. This code has been tested on Windows.
+  * ML_LNP.yml provided to set up conda enviroment. This code has been tested on Windows10.
   
   * run_pipeline.py runs the machine learning pipeline on a provided dataset in the Raw_Data directory. Change run parameters as needed at the top of the main function. Pipelines will be saved in the Runs folder.
   
