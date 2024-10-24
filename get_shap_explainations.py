@@ -22,7 +22,7 @@ get_shap_explainations main
 
 
 def main(pipeline, N_bins, refined = True):
-  print('\n###########################\n\n RUNNING SHAP EXPLANATIONS')
+  print(f'\n###########################\n\n RUNNING SHAP EXPLANATIONS, Refined features: {refined}')
   start_time = time.time()
 
 
@@ -75,9 +75,7 @@ def main(pipeline, N_bins, refined = True):
     # Get SHAP Interaction Values
     shap_interaction_values = explainer.shap_interaction_values(X)
     
-    #save SHAP Interaction Values
-    with open(shap_save_path + f"{model_name}_SHAP_inter_values.pkl",  'wb') as file:
-      pickle.dump(shap_interaction_values, file)
+
     
   else:
      shap_interaction_values = None
@@ -99,6 +97,10 @@ def main(pipeline, N_bins, refined = True):
   shap_values.values.tofile(new_save + f"{model_name}_SHAP_values.csv",sep = ',')
   shap_values.data.tofile(new_save + f"{model_name}_SHAP_data.csv",sep = ',')
 
+  #shap interaction
+      #save SHAP Interaction Values
+  with open(new_save + f"/{model_name}_SHAP_inter_values.pkl",  'wb') as file:
+    pickle.dump(shap_interaction_values, file)
 
   #Save average shap of the binned features as csv
   with open(new_save + f"/{model_name}_{cell}_mean_shap.csv", 'w', encoding = 'utf-8-sig') as f:

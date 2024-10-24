@@ -1,9 +1,8 @@
 from utilities import extract_training_data, init_pipeline, save_pipeline
-import plotting_functions as plotter
-from run_Model_Selection import run_Model_Selection
-import HL_1_performance
-import Feature_reduction
-import straw_model
+from plotting import plotting_functions as plotter
+from model_selection_refinement.run_Model_Selection import run_Model_Selection
+from model_selection_refinement import Feature_reduction
+from model_diagnostics import HL_1_performance, straw_model, learning_curve
 import get_shap_explainations
 import pickle
 import os
@@ -28,33 +27,34 @@ def main():
   
   #Parts to Run/Update
   run_preprocessing     = False
-  run_model_selection   = False
+  run_model_selection   = True
+
   run_HL_1              = False
-  run_feature_reduction = False
+  run_learning_curve    = False
+
+  run_feature_reduction = True
   run_straw_model       = False
-  run_learning_curve    = True
+
   run_SHAP_explain      = False
   
-  redo_learning_curve   = True
   #Cell types to Run
   cell_type_list = ['B16']
   # cell_type_list = ['B16', 'HepG2','HEK293', 'N2a', 'ARPE19', 'PC3']
 
-  
-  ############### PARAMETERS ###############################
   model_list = ['LGBM']
+  ############### PARAMETERS ###############################
+  #model_list = ['RF','LGBM', 'XGB', 'DT', 'MLR', 'lasso', 'PLS', 'kNN', 'MLP']
 
-  # model_list = ['RF','LGBM', 'XGB', 'DT', 'MLR', 'lasso', 'PLS', 'kNN', 'MLP']
   formula_type = 'percent' #options: ratio, percent, weight
 
   chemical_features = 'HL'       # options: HL, OHE, blended
 
   RLU_floor = 1.5
   size_cutoff = 10000
-  PDI_cutoff = 1 #Use 1 to include all data
+  PDI_cutoff = 1
 
   N_CV = 5
-  prefix = "RLU_" # "RLU_"
+  target_prefix = "RLU_"
 
   ################ SAVING, LOADING##########################
   RUN_NAME                  = f"Runs/example_{chemical_features}_Features_PDI{PDI_cutoff}_RLU{RLU_floor}_SIZE{size_cutoff}/"
@@ -84,7 +84,7 @@ def main():
                                     data_file_path=data_file_path,
                                     size_cutoff=size_cutoff,
                                     PDI_cutoff=PDI_cutoff,
-                                    prefix=prefix,
+                                    prefix=target_prefix,
                                     RLU_floor=RLU_floor,
                                     N_CV=N_CV)
       #Run Whole Pipeline
@@ -104,7 +104,7 @@ def main():
                     step = 'DATA PREPROCESSING')
       
 
-    ##################### Model Selection #####################################
+    ##################### Model Selection and HL-1 diagnostics#####################################
     if run_model_selection:
       #Timing (Estimate 5-10 min per cell)
       pipeline_dict, _, _, _ = run_Model_Selection(pipeline_dict)
@@ -118,6 +118,13 @@ def main():
 
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
                     step = 'MODEL SELECTION')
+    if run_learning_curve:      
+      #Timing (10 minutes per cell)
+      pipeline_dict = learning_curve.get_learning_curve(pipeline_dict, refined = False)
+      
+      save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
+                    step= 'LEARNING CURVE')
+              
     #################### Feature Reduction #####################################
     if run_feature_reduction:
       #Timing (Estimated 1-2hr per cell)
@@ -125,6 +132,7 @@ def main():
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
                     step = 'FEATURE REDUCTION')
     
+    #################### Straw model diagnostics and controls #####################################
     if run_straw_model:
       #Timing (Estimated 5-10min per cell)
       composition_features = ['HL_(IL+HL)',
@@ -159,15 +167,8 @@ def main():
 
       save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
                     step = 'STRAW MODEL')
-    if run_learning_curve:      
-      #Timing (10 minutes per cell)
-      if pipeline_dict['STEPS_COMPLETED']['Learning_Curve'] == False or redo_learning_curve:
-              pipeline_dict = plotter.get_learning_curve(pipeline_dict, refined = False)
-              
-              save_pipeline(pipeline=pipeline_dict, path = pipeline_path, 
-                            step= 'LEARNING CURVE')
-    
-    
+
+
     
     #################### SHAP Analysis #####################################
     if run_SHAP_explain:

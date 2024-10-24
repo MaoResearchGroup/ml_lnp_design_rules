@@ -1,6 +1,6 @@
 import pickle
 from utilities import truncate_colormap, get_Model_Selection_performance
-import plotting_functions as plotter
+from plotting import plotting_functions as plotter
 import os
 import matplotlib as plt
 
@@ -19,17 +19,17 @@ def main():
         cell_comparison        = False # Run cell-wise comparision figures
         cell_specific          = True  # cell type specific plots
 
-        prelim                 = False  # Run initial data analysis of training data
-        plot_f_distribution    = False  # Plot distributions of input features
-        plot_model_selection   = False  # Model selection and HL-1 performance plots
-        feature_reduction      = False  # Feature reduction plots
-        straw_model            = False  # Straw model plots (plotted using Graphpad in the manuscript instead)
-        run_learning_curve     = False  # Plot learning curves
-        run_SHAP_plots         = False # SHAP plots
-        refined_shap           = False # Whether to used feature refined models (True) or models trained on all provided data (False)
+        prelim                 = True  # Run initial data analysis of training data
+        plot_f_distribution    = True  # Plot distributions of input features
+        plot_model_selection   = True  # Model selection and HL-1 performance plots
+        feature_reduction      = True  # Feature reduction plots
+        straw_model            = True  # Straw model plots (plotted using Graphpad in the manuscript instead)
+        run_learning_curve     = True  # Plot learning curves
+        run_SHAP_plots         = True # SHAP plots
+        refined_shap           = True # Whether to used feature refined models (True) or models trained on all provided data (False)
         plot_bump              = False # Compiled LNP Design rules
 
-        RUN_NAME  = f"Runs/Final_HL_Features_PDI1_RLU1.5_SIZE10000/"
+        RUN_NAME  = f"Runs/example_HL_Features_PDI1_RLU1.5_SIZE10000/"
 
         
         cell_type_list = ['B16'] #must match naming on raw data files.
@@ -116,17 +116,7 @@ def main():
                                 pipeline_results = pickle.load(file)
 
                         RUN_NAME = pipeline_results['Saving']['RUN_NAME']
-                        pipeline_path             = f'{RUN_NAME}{c}/Pipeline_dict.pkl'
                         
-                        ############################# REMOVE ########################################
-                        # print(RUN_NAME)
-                        # #Check save path
-                        # base_save_path            = f"{RUN_NAME}{c}/HL-1/"
-                        # if os.path.exists(base_save_path) == False:
-                        #         os.makedirs(base_save_path, 0o666)
-
-
-
                         #Prelimary Dataset
                         if prelim:
                                 prelim_save = pipeline_results['Saving']['Figures'] + 'Prelim/'
@@ -202,14 +192,6 @@ def main():
                                                         feature_order=feature_plotting_order,
                                                         save = SHAP_save)
                                 
-                                # #Formulation Features
-                                # plotter.plot_SHAP_cluster(pipeline = pipeline_results,
-                                #                           param_type=param_type,
-                                #                 feature_name='all',
-                                #                 cmap = shap_cmap,
-                                #                 size = 1.8,
-                                #                 save = SHAP_save,
-                                #                 title = False)
                                 
                                 ### Formulation Relative Feature values EMBEDDED onto all SHAP VALUES
                                 plotter.plot_SHAP_cluster(pipeline = pipeline_results,

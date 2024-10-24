@@ -17,6 +17,7 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, param_type, chemical_type, data
     #Saving/Loading
     base_save_path            = f"{RUN_NAME}{cell}/"                 # Base save path for all results related to these model
     model_save_path           = f"{base_save_path}Trained_Models/" # Where to save model, results, and training data 
+    diagnostics_save_path     = f"{base_save_path}Model_diagnostics/" #save HL-1, Straw Model results
     refined_model_save_path   = f"{base_save_path}Feature_Reduction/" #where to save refined model and results
     shap_value_save_path      = f'{base_save_path}SHAP_Values/'
     straw_save_path           = f'{base_save_path}Straw_Models/'
@@ -32,6 +33,7 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, param_type, chemical_type, data
                         'Preprocessing': False,
                         'Model_Selection': False,
                         'Feature_Reduction': False,
+                        'Diagnostics': False,
                         'Straw_Model': False,
                         'SHAP': False,
                         'Learning_Curve': False
@@ -40,8 +42,8 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, param_type, chemical_type, data
                         'RUN_NAME': RUN_NAME,
                         'base': base_save_path,
                         'Models': model_save_path,
+                        'Diagnostics':diagnostics_save_path,
                         'Refined_Models': refined_model_save_path,
-                        'Straw_Models': straw_save_path,
                         'SHAP': shap_value_save_path,
                         'Figures': figure_save_path
                         },
@@ -83,6 +85,13 @@ def init_pipeline(pipeline_path, RUN_NAME, cell, param_type, chemical_type, data
                         'Refined_Model': None,
                         'Final_Results': None,
                         'Reduction_Results': None
+                        },
+                    'Learning_Curve':
+                    {'NUM_ITER': None,
+                        'num_splits': None,
+                        'num_sizes': None,
+                        'Train_Error': None,
+                        'Valid_Error': None
                         },
                     'Straw_Model':{
                         'X': None,
