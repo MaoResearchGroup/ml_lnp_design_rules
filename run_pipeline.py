@@ -41,9 +41,8 @@ def main():
   cell_type_list = ['B16']
   # cell_type_list = ['B16', 'HepG2','HEK293', 'N2a', 'ARPE19', 'PC3']
 
-  model_list = ['LGBM']
   ############### PARAMETERS ###############################
-  #model_list = ['RF','LGBM', 'XGB', 'DT', 'MLR', 'lasso', 'PLS', 'kNN', 'MLP']
+  model_list = ['RF','LGBM', 'XGB', 'DT', 'MLR', 'lasso', 'PLS', 'kNN', 'MLP']
 
   formula_type = 'percent' #options: ratio, percent, weight
 
