@@ -16,8 +16,8 @@ def main():
         """
 
         #Specify which plots to make
-        cell_comparison        = False # Run cell-wise comparision figures
-        cell_specific          = True  # cell type specific plots
+        cell_comparison        = True # Run cell-wise comparision figures
+        cell_specific          = False  # cell type specific plots
 
         prelim                 = True  # Run initial data analysis of training data
         plot_f_distribution    = True  # Plot distributions of input features
@@ -29,7 +29,7 @@ def main():
         refined_shap           = True # Whether to used feature refined models (True) or models trained on all provided data (False)
         plot_bump              = False # Compiled LNP Design rules
 
-        RUN_NAME  = f"Runs/example_HL_Features_PDI1_RLU1.5_SIZE10000/"
+        RUN_NAME  = f"Runs/Final_HL_Features_PDI1_RLU1.5_SIZE10000/"
 
         
         cell_type_list = ['B16'] #must match naming on raw data files.
@@ -54,13 +54,15 @@ def main():
 
         cell_comp_save_path = RUN_NAME + 'cell_comp_figures/'
 
+        comp_type = ['prelim', 'model selection', 'feature reduction', 'SHAP']
 
-        if not os.path.exists(cell_comp_save_path):
-                # Create the directory if it doesn't exist
-                os.makedirs( cell_comp_save_path)
-                print(f"Directory '{cell_comp_save_path}' created.")
-        else:
-                print(f"Directory '{cell_comp_save_path}' already exists.")
+        for t in comp_type:
+                if not os.path.exists(cell_comp_save_path + t + '/'):
+                        # Create the directory if it doesn't exist
+                        os.makedirs(cell_comp_save_path + t + '/')
+                        print(f"Directory '{cell_comp_save_path + t + '/'}' created.")
+                else:
+                        print(f"Directory '{cell_comp_save_path + t + '/'}' already exists.")
         
         
         #### Cell-wise comparison FIGURES/TABLES
@@ -77,22 +79,22 @@ def main():
                 if plot_f_distribution:
                         plotter.plot_tfxn_dist_comp(pipeline_list = pipe_list,
                                                         raw = True,
-                                                        save= cell_comp_save_path,
+                                                        save= cell_comp_save_path + 'prelim/',
                                                         new_order = ['HepG2', 'PC3', 'B16', 'HEK293',  'N2a', 'ARPE19'],
                                                         pipe_order = cell_type_list)
                         plotter.tfxn_heatmap(pipeline_list=pipe_list,
-                                        save=cell_comp_save_path,
+                                        save=cell_comp_save_path + 'prelim/',
                                         helper_lipid=True)
                 #Comparison of cell-cell model MAE
                 if plot_model_selection:
                         plotter.plot_cell_comparision(pipeline_list = pipe_list,
-                                                save= cell_comp_save_path)
+                                                save= cell_comp_save_path + 'model selection/')
                         plotter.tabulate_model_selection_results(pipeline_list=pipe_list,
                                                                 save=cell_comp_save_path)
                 if feature_reduction:
                         plotter.tabulate_refined_model_results(pipeline_list=pipe_list,
                                                         cell_type_list=cell_type_list,
-                                                        save=cell_comp_save_path)
+                                                        save=cell_comp_save_path+ 'feature reduction/')
                 #Design rule dot plot
                 if plot_bump:
                         if refined_shap:
@@ -104,7 +106,7 @@ def main():
                                         cmap=shap_cmap,
                                         mk_size= 2e3,
                                         feature_order= feature_plotting_order,
-                                        save= cell_comp_save_path)
+                                        save= cell_comp_save_path+ 'SHAP/')
                         
             
         ##### CELL TYPE SPECIFIC FIGURES ###########

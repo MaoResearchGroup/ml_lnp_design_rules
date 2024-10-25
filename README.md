@@ -11,6 +11,14 @@
 * Raw_Data directory contains relevant datasets used for model training and validation
   
 * Runs directory contains different pipeline runs (using different datasets)
+    * "Final_HL_Features_PDI1_RLU1.5_SIZE10000" run provides the trained models (only B16F10 cell type) and figures shown in main text of the manuscript. 
+
+    * "example_HL_Features_PDI1_RLU1.5_SIZE10000" run provides examples of pipeline outputs for model selection, feature reduction, model diagnostics, and SHAP values. Also see note below:
+
+    * NOTE: For model selection, random states of outer cross-validation loops have been set for accurate model comparisions, however, random states of inner cross-validation loops have not been set leading to the optimization of different model architectures. These random states can be set to improve reproducibility. 
+      * Thus, new runs of the pipeline with the provided dataset will lead to slightly differing downstream results (such as feature refinement and SHAP values) than presented on the manuscript. 
+      * Importantly, SHAP values for compositional features ('NP_ratio','PEG_(Chol+PEG)','(IL+HL)','HL_(IL+HL)') remain generally consistent no matter the random_state. 
+      * On the other hand, helper lipid chemical feature refinement and analysis produce more variable results due to small sample size (only 6 helper lipids tested), thus less weight should be placed on chemical feature results until expanded lipid chemical libraries are tested. 
   
 * Within each run there are subdirectories for related results and figures for models trained on each individual cell type datasets and cell-wise comparison figures folder.
   
@@ -18,14 +26,12 @@
 * Each cell type directory contains directories related to different aspects of the ML pipeline (see below):
 
   * Trained_models: Model hyperparameter tuning and trained models
-  
-  * HL_1 : leave-one-lipid-out or helper lipid minus one analysis of optimized models
+
+  * Model_diagnostics: contains HL-1 (leave-one-lipid-out or helper lipid minus one analysis of optimized models), learning_curve, and straw models results
   
   * Feature_Reduction : training data and results for feature reduction/refinement procedures
   
   * SHAP_Values: Calculated SHAP values for feature importance and design rules
-
-  * Straw_Models: Straw model analysis of selected models.
         
   * Figures: Contains most figures used in manuscript and group by relevance
       

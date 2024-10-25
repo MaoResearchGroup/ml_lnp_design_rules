@@ -34,6 +34,8 @@ class NESTED_CV:
     - prints progress and reults at the end of each loop
     - configures a pandas dataframe with the reults of the NESTED_CV
     - fits and trains the best model based on the results of the NESTED_CV
+    - Note: For model selection, random states of outer cross-validation loops have been set for accurate model comparisions, 
+    however, random states of inner cross-validation loops have not been set leading to the optimization of different model architectures which may lead to differnt downstream results. 
     """
 
     #Functions here
@@ -191,10 +193,10 @@ class NESTED_CV:
           self.y_test_list.append(y_test)
                 
           # configure the cross-validation procedure - inner loop (validation set/HP optimization)
-          cv_inner = KFold(n_splits = 5, shuffle = True) ##### RANDOM STATE WAS NOT SET
+          cv_inner = KFold(n_splits = 5, shuffle = True, random_state= 0 ) ##### RANDOM STATE WAS NOT SET
 
           # define search space
-          search = RSCV(self.user_defined_model, self.p_grid, n_iter=100, verbose=0, scoring='neg_mean_absolute_error', cv=cv_inner,  n_jobs= -1, refit=True) #### RANDOM STATE WAS NOT SET
+          search = RSCV(self.user_defined_model, self.p_grid, n_iter=100, verbose=0, scoring='neg_mean_absolute_error', cv=cv_inner,  n_jobs= -1, refit=True, random_state= 42) #### RANDOM STATE WAS NOT SET
                   
           # execute search
           y_train = np.ravel(y_train)
