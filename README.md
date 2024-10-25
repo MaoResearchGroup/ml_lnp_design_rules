@@ -1,5 +1,5 @@
 # ml_lnp_design_rules
-**Machine Learning Pipeline to predict LNP transfection efficiency and Analyze LNP design rules**
+**Machine learning pipeline to predict LNP transfection efficiency and analyze LNP design rules for cell type-preferential transfection**
 
 [Manuscript](https://pubs.acs.org/doi/full/10.1021/acsnano.4c07615#)
 
