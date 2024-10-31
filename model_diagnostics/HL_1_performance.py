@@ -7,6 +7,7 @@ import os
 from collections import defaultdict
 from copy import deepcopy
 import time
+from model_selection_refinement.Feature_reduction import evaluate_model
 
 def eval_HL_1(dist_linkage, X_features, Y, model, N_CV, repeats, method:str = 'MAE'):
     N_features = len(X_features.columns)
